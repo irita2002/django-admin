@@ -6,7 +6,7 @@ from .views import DashboardsView
 urlpatterns = [
     path(
         "",
-        DashboardsView.as_view(template_name="dashboard_analytics.html"),
+        DashboardsView,
         name="index",
     )
 ]

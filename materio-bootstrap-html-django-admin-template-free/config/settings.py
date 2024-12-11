@@ -180,7 +180,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 THEME_LAYOUT_DIR = THEME_LAYOUT_DIR
 THEME_VARIABLES = THEME_VARIABLES
-
+LOGIN_URL = '/auth/login'
 
 
 # Your stuff...
