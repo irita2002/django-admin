@@ -20,3 +20,18 @@ class ProductosVendidoAdmin(admin.ModelAdmin):
 class BodegaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'cp')
     search_fields = ('nombre', 'cp')
+
+@admin.register(ExistenciasBodegas)
+class ExistenciasBodegasAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'bodega')
+
+@admin.register(ExistenciasTienda)
+class ExistenciasTiendaAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'tienda')
+
+@admin.register(Iteracion)
+class IteracionAdmin(admin.ModelAdmin):
+    list_display = ('numero_iteracion', 'producto', 'bodega', 'orden_entrega')
+    list_filter = ('numero_iteracion', 'bodega')
+    search_fields = ('producto__nombre', 'bodega__nombre')
+    ordering = ('-numero_iteracion', 'orden_entrega')

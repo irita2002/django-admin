@@ -1,0 +1,50 @@
+<div class="card">
+  <h5 class="card-header">Transferir Productos</h5>
+  <div class="card-body">
+    {% if messages %} {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible mb-4" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %} {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Producto a transferir</label>
+          {{ form.producto }}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Cantidad</label>
+          {{ form.cantidad }}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Tienda de origen</label>
+          {{ form.tienda }}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Bodega de destino</label>
+          {{ form.bodega }}
+        </div>
+      </div>
+        <div class="col-md-6">
+          <label class="form-label">Numero de Iteracion</label>
+          {{ form.numero_iteracion }}
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bx bx-transfer-alt me-2"></i> Realizar Transferencia
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

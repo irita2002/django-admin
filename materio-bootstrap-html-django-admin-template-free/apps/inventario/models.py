@@ -46,8 +46,37 @@ class ExistenciasBodegas(models.Model):
     cantidad = models.IntegerField(default=0)
     bodega = models.ForeignKey(Bodega, on_delete=models.CASCADE)
 
+class Iteracion(models.Model):
+    numero_iteracion = models.IntegerField(verbose_name="Número de Iteración")
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, verbose_name="Producto")
+    bodega = models.ForeignKey(Bodega, on_delete=models.CASCADE, verbose_name="Bodega")
+    orden_entrega = models.IntegerField(verbose_name="Orden de Entrega")
+    completada = models.BooleanField(default=False)
 
+    class Meta:
+        verbose_name = "Iteración"
+        verbose_name_plural = "Iteraciones"
+        unique_together = [['numero_iteracion', 'producto', 'bodega']]
+        ordering = ['numero_iteracion', 'orden_entrega']
 
+    def __str__(self):
+        return f"Iteración {self.numero_iteracion} - {self.producto.nombre} en {self.bodega.nombre} (Orden: {self.orden_entrega})"
+
+class TransferenciaHistorial(models.Model):
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    bodega = models.ForeignKey(Bodega, on_delete=models.CASCADE)
+    cantidad = models.IntegerField()
+    fecha_transferencia = models.DateTimeField(auto_now_add=True)
+    iteracion = models.ForeignKey(Iteracion, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-fecha_transferencia']
+        verbose_name = "Historial de Transferencia"
+        verbose_name_plural = "Historial de Transferencias"
+
+    def __str__(self):
+        return f"{self.cantidad} unidades de {self.producto} a {self.bodega}"
+        
 # Create your models here.
 #class Comunidad(models.Model):
 #    nombre = models.CharField(max_length=100)

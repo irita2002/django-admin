@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Existencias Totales</title>
+    <style>
+        table { margin: 20px 0; border-collapse: collapse; width: 100%; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f5f5f5; }
+        .total-row { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Consulta de existencias completas</h1>
+    
+    <form method="get">
+        <select name="producto_id">
+            <option value="">Seleccione un producto</option>
+            {% for producto in productos %}
+                <option value="{{ producto.id }}" 
+                    {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
+                    {{ producto.nombre }} (Actual: {{ producto.cantidad }})
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Consultar</button>
+    </form>
+
+    {% if producto_seleccionado %}
+        <h2>{{ producto_seleccionado.nombre }}</h2>
+        
+        <!-- Tabla para Bodegas -->
+        <h3>Existencias en Bodegas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Bodega</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for existencia in existencias_bodegas %}
+                    <tr>
+                        <td>{{ existencia.bodega.nombre }}</td>
+                        <td>{{ existencia.cantidad }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">No hay existencias en bodegas</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>Total Bodegas</td>
+                    <td>{{ total_bodegas }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Tabla para Tiendas -->
+        <h3>Existencias en Tiendas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tienda</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for existencia in existencias_tiendas %}
+                    <tr>
+                        <td>{{ existencia.tienda.nombre }}</td>
+                        <td>{{ existencia.cantidad }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">No hay existencias en tiendas</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>Total Tiendas</td>
+                    <td>{{ total_tiendas }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Total General -->
+        <div style="margin-top: 20px; font-size: 1.2em;">
+            <strong>Total General (Bodegas + Tiendas):</strong> {{ gran_total }}
+        </div>
+    {% endif %}
+</body>
+</html>
