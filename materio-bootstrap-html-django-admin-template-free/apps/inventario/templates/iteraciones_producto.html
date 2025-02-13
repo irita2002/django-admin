@@ -1,4 +1,4 @@
-
+{% load static %}
 
 <div class="card">
   <h5 class="card-header">Iteraciones de Entrega</h5>
@@ -25,42 +25,48 @@
     {% if producto_seleccionado %}
       <h4 class="mb-4">{{ producto_seleccionado.nombre }}</h4>
       
-      {% for num_iteracion, iteraciones in iteraciones_agrupadas.items %}
-        <div class="card mb-4">
-          <div class="card-header bg-primary text-white">
-            Iteración {{ num_iteracion }}
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-striped">
-                <thead>
-                  <tr>
-                    <th style="width: 10%">Orden</th>
-                    <th>Bodega</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for iteracion in iteraciones %}
-                    <tr>
-                      <td>{{ iteracion.orden_entrega }}</td>
-                      <td>{{ iteracion.bodega.nombre }}</td>
-                      <td>
-                      </td>
-                      <td><a href="{% url 'detalle_bodega' iteracion.bodega.id %}" class="btn btn-sm btn-info">
-                        Ver historial
-                      </a></td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      {% empty %}
-        <div class="alert alert-warning">
-          No hay iteraciones registradas para este producto
-        </div>
-      {% endfor %}
+      <div class="table-responsive">
+        <table class="table table-bordered" border="1">
+          <thead class="table-dark">
+            <tr>
+              <th>Bodega</th>
+              <th>Orden</th>
+              {% for iteracion in iteraciones_agrupadas %}
+                <th class="text-center">{{ iteracion.numero_iteracion }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <td>Iteracion</td>
+            <td> </td>
+            {% for iteracion in iteraciones_agrupadas %}
+                  <td class="text-center">
+                    {% with completada=iteracion.completada %}
+                      {% if completada %}
+                      <input type="checkbox" id="completada1" name="completada1" value="True" onClick="return false;" checked> 
+                      {% else %}
+                      <input type="checkbox" id="completada2" name="completada2" value="False" onClick="return false;"> 
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                {% endfor %}
+            {% for bodega in bodegas %}
+              <tr>
+                <td>{{ bodega.nombre }}</td>
+                <td>{{ bodega.orden }}</td>
+                {% for transferencia in transferencias %}
+                {% if transferencia.bodega.nombre == bodega.nombre %}
+
+                <td>{{transferencia.cantidad}} ({{transferencia.fecha_transferencia|date:"d/m/Y"}})</td>
+                {% endif %}
+
+                {% endfor %}
+
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       
     {% endif %}
   </div>

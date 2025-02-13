@@ -153,11 +153,15 @@ def transferir_producto(request):
 
 from django.shortcuts import render
 from .models import Producto, Iteracion
+from django.template.defaulttags import register
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key, False)
 
 def iteraciones_por_producto(request):
     producto_seleccionado = None
     iteraciones_agrupadas = {}
-    
+    bodegas = Bodega.objects.all()
     if 'producto_id' in request.GET:
         producto_id = request.GET['producto_id']
         producto_seleccionado = Producto.objects.get(id=producto_id)
@@ -165,20 +169,24 @@ def iteraciones_por_producto(request):
         # Obtener todas las iteraciones del producto ordenadas
         iteraciones = Iteracion.objects.filter(
             producto=producto_seleccionado
-        ).order_by('numero_iteracion', 'orden_entrega')
+        )
         
         # Agrupar por número de iteración
-        for iteracion in iteraciones:
+        for iteracion in iteraciones:   
             num_iteracion = iteracion.numero_iteracion
             if num_iteracion not in iteraciones_agrupadas:
                 iteraciones_agrupadas[num_iteracion] = []
             iteraciones_agrupadas[num_iteracion].append(iteracion)
 
     productos = Producto.objects.all()
+    transferencia = TransferenciaHistorial.objects.all().order_by('fecha_transferencia')
     return render(request, 'iteraciones_producto.html', {
         'productos': productos,
         'producto_seleccionado': producto_seleccionado,
-        'iteraciones_agrupadas': iteraciones_agrupadas
+        'iteraciones_agrupadas': iteraciones,
+        'bodegas': bodegas, 
+        'transferencias':transferencia,
+        
     })
 
 def detalle_bodega_iteracion(request, bodega_id):

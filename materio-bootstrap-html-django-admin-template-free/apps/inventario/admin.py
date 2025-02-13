@@ -31,7 +31,13 @@ class ExistenciasTiendaAdmin(admin.ModelAdmin):
 
 @admin.register(Iteracion)
 class IteracionAdmin(admin.ModelAdmin):
-    list_display = ('numero_iteracion', 'producto', 'bodega', 'orden_entrega')
-    list_filter = ('numero_iteracion', 'bodega')
-    search_fields = ('producto__nombre', 'bodega__nombre')
-    ordering = ('-numero_iteracion', 'orden_entrega')
+    list_display = ('numero_iteracion', 'producto')
+    list_filter = ('numero_iteracion',)
+    search_fields = ('producto__nombre',)
+    ordering = ('-numero_iteracion',)
+    
+@admin.register(TransferenciaHistorial)
+class TransferenciaHistorialAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'iteracion')
+    list_filter = ('iteracion',)
+    search_fields = ('producto__nombre',)
