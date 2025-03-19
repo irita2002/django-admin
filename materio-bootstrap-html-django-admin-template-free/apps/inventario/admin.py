@@ -3,7 +3,7 @@ from .models import *
 # Register your models here.
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ( 'cantidad',)
+    list_display = ( 'nombre','cantidad')
     search_fields = ( 'cantidad',)
 
 @admin.register(Tienda)

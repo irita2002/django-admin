@@ -1,5 +1,9 @@
-{% load static %}
+{% extends layout_path %}
 
+{% load static %}
+{% load i18n %}
+
+{% block content %}
 <div class="card">
   <h5 class="card-header">Iteraciones de Entrega</h5>
   <div class="card-body">
@@ -15,6 +19,15 @@
               </option>
             {% endfor %}
           </select>
+          <select name="iteracion_id" class="form-select">
+            <option value="">Seleccione una Iteracion</option>
+            {% for iteracion in iteracion_t %}
+              <option value="Iteracion {{ iteracion.id }}" 
+                {% if True %}selected{% endif %}>
+                {{ iteracion.numero_iteracion }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
         <div class="col-md-2">
           <button type="submit" class="btn btn-primary">Buscar</button>
@@ -25,33 +38,17 @@
     {% if producto_seleccionado %}
       <h4 class="mb-4">{{ producto_seleccionado.nombre }}</h4>
       
-      <div class="table-responsive">
-        <table class="table table-bordered" border="1">
-          <thead class="table-dark">
-            <tr>
+      <div class="table-responsive text-nowrap">
+        <table class="table">
+          <thead>
+            <tr class="table-nowrap">
               <th>Bodega</th>
               <th>Orden</th>
-              {% for iteracion in iteraciones_agrupadas %}
-                <th class="text-center">{{ iteracion.numero_iteracion }}</th>
-              {% endfor %}
             </tr>
           </thead>
-          <tbody>
-            <td>Iteracion</td>
-            <td> </td>
-            {% for iteracion in iteraciones_agrupadas %}
-                  <td class="text-center">
-                    {% with completada=iteracion.completada %}
-                      {% if completada %}
-                      <input type="checkbox" id="completada1" name="completada1" value="True" onClick="return false;" checked> 
-                      {% else %}
-                      <input type="checkbox" id="completada2" name="completada2" value="False" onClick="return false;"> 
-                      {% endif %}
-                    {% endwith %}
-                  </td>
-                {% endfor %}
+          <tbody class="table-border-bottom-0">
             {% for bodega in bodegas %}
-              <tr>
+              <tr class="table-default">
                 <td>{{ bodega.nombre }}</td>
                 <td>{{ bodega.orden }}</td>
                 {% for transferencia in transferencias %}
@@ -71,3 +68,4 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}

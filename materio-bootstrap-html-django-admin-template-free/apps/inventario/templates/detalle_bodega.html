@@ -1,3 +1,9 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+
+{% block content %}
 <div class="card">
   <h5 class="card-header">Historial de Transferencias - {{ bodega.nombre }}</h5>
   <div class="card-body">
@@ -32,3 +38,4 @@
     {% endfor %}
   </div>
 </div>
+{% endblock %}

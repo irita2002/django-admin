@@ -6,6 +6,8 @@ from django.db.models import Sum
 from django.contrib import messages
 from .forms import TransferenciaForm
 from django.db import transaction
+from web_project.template_helpers.theme import TemplateHelper
+
 class inventario(TemplateView):
     template_name = 'inventario.html'
 
@@ -15,7 +17,13 @@ class inventario(TemplateView):
         # Acceso a datos del modelo
         mis_productos = Producto.objects.all()
         context['productos'] = mis_productos
+        context.update(
+            {
+                "is_menu": False,
+            }
+        )
 
+        TemplateHelper.map_context(context)
         return context
 
 
@@ -74,7 +82,8 @@ def existencias_combinadas(request):
         'existencias_tiendas': existencias_tiendas,
         'total_bodegas': total_bodegas,
         'total_tiendas': total_tiendas,
-        'gran_total': gran_total
+        'gran_total': gran_total,
+        'layout_path': TemplateHelper.set_layout("layout_blank.html"),
     })
 
 
@@ -95,6 +104,7 @@ def transferir_producto(request):
             bodega = form.cleaned_data['bodega']
             cantidad = form.cleaned_data['cantidad']
             numero_iteracion = form.cleaned_data['numero_iteracion']
+            fecha_transferencia = form.cleaned_data['fecha_transferencia']
 
             try:
                 existencia_tienda = ExistenciasTienda.objects.get(
@@ -124,19 +134,16 @@ def transferir_producto(request):
                     iteracion, created = Iteracion.objects.get_or_create(
                         numero_iteracion=numero_iteracion,
                         producto=producto,
-                        bodega=bodega,
-                        defaults={'orden_entrega': 1}
                     )
-                    if not created:
-                        iteracion.orden_entrega += 1
-                        iteracion.save()
+                    
 
                     # Registrar en el historial
                     TransferenciaHistorial.objects.create(
                         producto=producto,
                         bodega=bodega,
                         cantidad=cantidad,
-                        iteracion=iteracion
+                        iteracion=iteracion,
+                        fecha_transferencia=fecha_transferencia
                     )
 
                 messages.success(request, f'Transferencia a {bodega.nombre} registrada en Iteración {numero_iteracion}')
@@ -149,7 +156,7 @@ def transferir_producto(request):
     else:
         form = TransferenciaForm()
 
-    return render(request, 'transferencia.html', {'form': form})
+    return render(request, 'transferencia.html', {'form': form,'layout_path': TemplateHelper.set_layout("layout_blank.html"),})
 
 from django.shortcuts import render
 from .models import Producto, Iteracion
@@ -160,17 +167,21 @@ def get_item(dictionary, key):
 
 def iteraciones_por_producto(request):
     producto_seleccionado = None
+    iteracion_seleccionado = None
+
     iteraciones_agrupadas = {}
+    iteraciones_t = None
     bodegas = Bodega.objects.all()
     if 'producto_id' in request.GET:
         producto_id = request.GET['producto_id']
         producto_seleccionado = Producto.objects.get(id=producto_id)
-        
+        if 'iteracion_id' in request.GET:
+            iteracion_id = request.GET['iteracion_id']
         # Obtener todas las iteraciones del producto ordenadas
-        iteraciones = Iteracion.objects.filter(
-            producto=producto_seleccionado
-        )
-        
+            iteraciones = Iteracion.objects.filter(
+                producto=producto_seleccionado,
+                id=iteracion_id
+            )
         # Agrupar por número de iteración
         for iteracion in iteraciones:   
             num_iteracion = iteracion.numero_iteracion
@@ -179,13 +190,18 @@ def iteraciones_por_producto(request):
             iteraciones_agrupadas[num_iteracion].append(iteracion)
 
     productos = Producto.objects.all()
-    transferencia = TransferenciaHistorial.objects.all().order_by('fecha_transferencia')
+    transferencia = TransferenciaHistorial.objects.filter(producto=producto_seleccionado,iteracion=iteracion_id).order_by('fecha_transferencia')
+    iteracion_t = Iteracion.objects.filter(producto=producto_seleccionado)
+
+
     return render(request, 'iteraciones_producto.html', {
         'productos': productos,
         'producto_seleccionado': producto_seleccionado,
         'iteraciones_agrupadas': iteraciones,
+        'iteracion_t':iteracion_t,
         'bodegas': bodegas, 
         'transferencias':transferencia,
+        'layout_path': TemplateHelper.set_layout("layout_blank.html"),
         
     })
 
@@ -205,5 +221,7 @@ def detalle_bodega_iteracion(request, bodega_id):
     
     return render(request, 'detalle_bodega.html', {
         'bodega': bodega,
-        'datos_agrupados': datos_agrupados
+        'datos_agrupados': datos_agrupados,
+        'layout_path': TemplateHelper.set_layout("layout_blank.html"),
+
     })

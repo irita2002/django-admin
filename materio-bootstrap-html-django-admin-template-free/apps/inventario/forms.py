@@ -14,6 +14,11 @@ class TransferenciaForm(forms.Form):
         queryset=Bodega.objects.all(),
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    fecha_transferencia = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    
+
     cantidad = forms.IntegerField(
         min_value=1,
         widget=forms.NumberInput(attrs={'class': 'form-control'})

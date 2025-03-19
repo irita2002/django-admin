@@ -1,3 +1,9 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+
+{% block content %}
 <div class="card">
   <h5 class="card-header">Transferir Productos</h5>
   <div class="card-body">
@@ -38,6 +44,10 @@
           <label class="form-label">Numero de Iteracion</label>
           {{ form.numero_iteracion }}
         </div>
+        <div class="col-md-6">
+          <label class="form-label">Fecha</label>
+          {{ form.fecha_transferencia }}
+        </div>
       </div>
 
       <div class="d-grid gap-2">
@@ -48,3 +58,4 @@
     </form>
   </div>
 </div>
+{% endblock %}
