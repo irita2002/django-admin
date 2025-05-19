@@ -13,4 +13,6 @@ urlpatterns = [
     path('transferencias/', views.transferir_producto, name='transferir_producto'),
     path('bodegas/<int:bodega_id>/', views.detalle_bodega_iteracion, name='detalle_bodega'),
     path('iteraciones-producto/', views.iteraciones_por_producto, name='iteraciones_producto'),
+    path('', views.mapa_principal, name='mapa_principal'),
+    
 ]

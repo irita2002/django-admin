@@ -22,7 +22,7 @@
           <select name="iteracion_id" class="form-select">
             <option value="">Seleccione una Iteracion</option>
             {% for iteracion in iteracion_t %}
-              <option value="Iteracion {{ iteracion.id }}" 
+              <option value="{{ iteracion.numero_iteracion }}" 
                 {% if True %}selected{% endif %}>
                 {{ iteracion.numero_iteracion }}
               </option>

@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 from django.views.generic.edit import FormView
 from django.shortcuts import render
 from .forms import LoginForm
-
+from web_project.template_helpers.theme import TemplateHelper
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -17,7 +17,7 @@ def sign_in(request):
         if request.user.is_authenticated:
             return redirect('/')
         form = LoginForm()
-        return render(request,'auth_login_basic.html', {'form': form})
+        return render(request,'auth_login_basic.html', {'form': form,'layout_path': TemplateHelper.set_layout("layout_blank.html"),})
     
     elif request.method == 'POST':
         form = LoginForm(request.POST)
@@ -33,7 +33,7 @@ def sign_in(request):
         
         # form is not valid or user is not authenticated
         messages.error(request,f'Contaseña o usuario incorrecto')
-        return render(request,'auth_login_basic.html',{'form': form})
+        return render(request,'auth_login_basic.html',{'form': form,'layout_path': TemplateHelper.set_layout("layout_blank.html"),})
 
 def sign_out(request):
     logout(request)

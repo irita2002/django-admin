@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Producto,ExistenciasBodegas, ExistenciasTienda,Bodega
+from .models import Producto,ExistenciasBodegas, ExistenciasTienda,Bodega,Tienda
 from django.views.generic import TemplateView
 from web_project import TemplateLayout
 from django.db.models import Sum
@@ -7,6 +7,7 @@ from django.contrib import messages
 from .forms import TransferenciaForm
 from django.db import transaction
 from web_project.template_helpers.theme import TemplateHelper
+from .utils.map_generator import generar_mapa_offline
 
 class inventario(TemplateView):
     template_name = 'inventario.html'
@@ -94,7 +95,8 @@ from django.contrib import messages
 from .models import ExistenciasTienda, ExistenciasBodegas, TransferenciaHistorial, Iteracion
 from .forms import TransferenciaForm
 from django.utils import timezone
-
+from django.contrib.auth.decorators import login_required
+@login_required
 def transferir_producto(request):
     if request.method == 'POST':
         form = TransferenciaForm(request.POST)
@@ -168,19 +170,20 @@ def get_item(dictionary, key):
 def iteraciones_por_producto(request):
     producto_seleccionado = None
     iteracion_seleccionado = None
-
+    iteracion_id=0
+    iteraciones={}
     iteraciones_agrupadas = {}
     iteraciones_t = None
     bodegas = Bodega.objects.all()
     if 'producto_id' in request.GET:
         producto_id = request.GET['producto_id']
         producto_seleccionado = Producto.objects.get(id=producto_id)
+        print(producto_seleccionado)
         if 'iteracion_id' in request.GET:
             iteracion_id = request.GET['iteracion_id']
         # Obtener todas las iteraciones del producto ordenadas
             iteraciones = Iteracion.objects.filter(
                 producto=producto_seleccionado,
-                id=iteracion_id
             )
         # Agrupar por número de iteración
         for iteracion in iteraciones:   
@@ -191,7 +194,7 @@ def iteraciones_por_producto(request):
 
     productos = Producto.objects.all()
     transferencia = TransferenciaHistorial.objects.filter(producto=producto_seleccionado,iteracion=iteracion_id).order_by('fecha_transferencia')
-    iteracion_t = Iteracion.objects.filter(producto=producto_seleccionado)
+    iteracion_t = Iteracion.objects.all
 
 
     return render(request, 'iteraciones_producto.html', {
@@ -225,3 +228,9 @@ def detalle_bodega_iteracion(request, bodega_id):
         'layout_path': TemplateHelper.set_layout("layout_blank.html"),
 
     })
+
+def mapa_principal(request):
+    tiendas = Tienda.objects.all()
+    bodegas = Bodega.objects.all()
+    mapa_html = generar_mapa_offline(list(tiendas) + list(bodegas))
+    return render(request, 'map.html', {'mapa': mapa_html})

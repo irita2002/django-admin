@@ -181,7 +181,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 THEME_LAYOUT_DIR = THEME_LAYOUT_DIR
 THEME_VARIABLES = THEME_VARIABLES
 LOGIN_URL = '/auth/login'
-
-
+OSMNX_CACHE_DIR = os.path.join(BASE_DIR, 'mapdata')
+OX_CONFIG = {
+    'cache_dir': os.path.join(BASE_DIR, 'osmnx_cache'),
+    'use_cache': True,
+    'log_console': True
+}
 # Your stuff...
 # ------------------------------------------------------------------------------
