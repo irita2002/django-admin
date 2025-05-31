@@ -20,12 +20,11 @@
             </thead>
             <tbody>
               {% for t in tiendas %}
-              <tr {% if tienda_seleccionada == t.id %}class="table-primary"{% endif %}>
-                <td>
-                  <a href="{% url 'inventario:ver_tiendas' t.id %}" class="stretched-link text-decoration-none">
-                    {{ t.nombre }}
-                  </a>
-                </td>
+              <tr class="{% if tienda_seleccionada == t.id %}table-primary{% endif %} tienda-row" 
+                  data-url="{% url 'inventario:ver_tiendas' t.id %}" 
+                  style="cursor: pointer;"
+                  onclick="window.location.href='{% url 'inventario:ver_tiendas' t.id %}'">
+                <td>{{ t.nombre }}</td>
                 <td>{{ t.id }}</td>
               </tr>
               {% endfor %}
@@ -35,7 +34,7 @@
       </div>
     </div>
 
-    <!-- Mapa -->
+    <!-- Resto del contenido igual... -->
     <div class="col-md-6">
       <div class="card h-100 shadow-sm">
         <div class="card-header bg-success text-white">
@@ -44,50 +43,14 @@
         <div class="card-body p-0" style="height: 100%;">
           <div id="map-container" style="width: 100%; height: 100%;">
             {{ mapa|safe }}
-            <script>
-            document.addEventListener('DOMContentLoaded', function(){
-              // 1) Localiza el iframe generado por Folium
-              const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
-              if (!iframe) {
-                console.error("No encontré el iframe de Folium");
-                return;
-              }
-            
-              // 2) Cuando el iframe termine de cargarse, capturamos su window y buscamos el map_<id>
-              iframe.addEventListener('load', function(){
-                const win = iframe.contentWindow;
-                // Busca la variable global map_<uuid>
-                const mapVarName = Object.keys(win).find(k => k.startsWith('map_'));
-                if (!mapVarName) {
-                  console.error("Dentro del iframe no hallé ninguna map_<id>");
-                  return;
-                }
-                const foliumMap = win[mapVarName];
-                console.log("Mapa de Folium en iframe:", mapVarName, foliumMap);
-            
-                // 3) Ahora que tenemos la instancia de L.Map, enganchamos clicks en las filas
-                document.querySelectorAll('.recomendacion').forEach(fila => {
-                  fila.style.cursor = 'pointer';
-                  fila.addEventListener('click', () => {
-                    const lat = parseFloat(fila.dataset.lat);
-                    const lng = parseFloat(fila.dataset.lng);
-                    console.log("Voy a hacer zoom a:", lat, lng);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                      foliumMap.setView([lat, lng], 17);
-                    }
-                  });
-                });
-              });
-            });
-            </script>
           </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Resto del template igual... -->
   <div class="row">
-    <!-- Select + Recomendaciones -->
     <div class="col-md-6">
       <div class="card mb-4 shadow-sm">
         <div class="card-header bg-info text-white">
@@ -144,48 +107,100 @@
       </div>
     </div>
 
-    <!-- Espacio libre / futuros widgets -->
     <div class="col-md-6">
-      <!-- Aquí podrías añadir paneles de detalle, gráficas, etc. -->
+      <!-- Espacio libre -->
     </div>
   </div>
 </div>
 
 {% endblock %}
 
-
 {% block scripts %}
   {{ block.super }}
   <script>
-    document.addEventListener('DOMContentLoaded', function(){
-      // Localiza el iframe de Folium
-      const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
-      if (!iframe) {
-        console.error("No encontré el iframe de Folium");
-        return;
-      }
-      iframe.addEventListener('load', function(){
-        const win = iframe.contentWindow;
-        const mapVar = Object.keys(win).find(k => k.startsWith('map_'));
-        if (!mapVar) {
-          console.error("No hallé map_<id> en el iframe");
-          return;
-        }
-        const foliumMap = win[mapVar];
-        console.log("Mapa Folium inicializado:", mapVar);
-
-        document.querySelectorAll('.recomendacion').forEach(fila => {
-          fila.style.cursor = 'pointer';
-          fila.addEventListener('click', () => {
-            const lat = parseFloat(fila.dataset.lat);
-            const lng = parseFloat(fila.dataset.lng);
-            console.log("Zoom a:", lat, lng);
-            if (!isNaN(lat) && !isNaN(lng)) {
-              foliumMap.setView([lat, lng], 17);
-            }
-          });
+    // Función mejorada para manejar clicks en tiendas
+    function initializeTiendaClicks() {
+      console.log('Inicializando clicks de tiendas...');
+      
+      const tiendaRows = document.querySelectorAll('.tienda-row');
+      console.log('Filas encontradas:', tiendaRows.length);
+      
+      tiendaRows.forEach((row, index) => {
+        const url = row.dataset.url;
+        console.log(`Fila ${index}: URL = ${url}`);
+        
+        // Remover eventos anteriores para evitar duplicados
+        row.replaceWith(row.cloneNode(true));
+        
+        // Obtener la nueva referencia después del clonado
+        const newRow = document.querySelectorAll('.tienda-row')[index];
+        
+        newRow.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          console.log('Click en tienda, navegando a:', url);
+          
+          if (url) {
+            window.location.href = url;
+          } else {
+            console.error('URL no encontrada para esta tienda');
+          }
+        });
+        
+        // Añadir efecto visual al hover
+        newRow.addEventListener('mouseenter', function() {
+          this.style.backgroundColor = '#e3f2fd';
+        });
+        
+        newRow.addEventListener('mouseleave', function() {
+          this.style.backgroundColor = '';
         });
       });
-    });
+    }
+
+    // Función para manejar el mapa
+    function initializeMapInteraction() {
+      const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
+      if (iframe) {
+        iframe.addEventListener('load', function(){
+          const win = iframe.contentWindow;
+          const mapVar = Object.keys(win).find(k => k.startsWith('map_'));
+          if (mapVar) {
+            const foliumMap = win[mapVar];
+            
+            document.querySelectorAll('.recomendacion').forEach(fila => {
+              fila.style.cursor = 'pointer';
+              fila.addEventListener('click', () => {
+                const lat = parseFloat(fila.dataset.lat);
+                const lng = parseFloat(fila.dataset.lng);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  foliumMap.setView([lat, lng], 17);
+                }
+              });
+            });
+          }
+        });
+      }
+    }
+
+    // Esperar a que el DOM esté completamente cargado
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM completamente cargado');
+        initializeTiendaClicks();
+        initializeMapInteraction();
+      });
+    } else {
+      // DOM ya está cargado
+      console.log('DOM ya estaba cargado');
+      initializeTiendaClicks();
+      initializeMapInteraction();
+    }
+
+    // Fallback: también ejecutar después de un pequeño delay
+    setTimeout(function() {
+      initializeTiendaClicks();
+    }, 500);
   </script>
 {% endblock %}

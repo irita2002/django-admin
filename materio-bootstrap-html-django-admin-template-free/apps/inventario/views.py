@@ -798,39 +798,43 @@ from .utils.map_generator import generar_mapa_offline
 def ver_tiendas(request, tienda_id=None):
     bodegas = Bodega.objects.all()
     mapa_html = None
-    producto_seleccionado=None
+    producto_seleccionado = None
     tiendas = Tienda.objects.all()
     productos = Producto.objects.all()
+    recomendaciones = []  # Inicializar como lista vacía
     
     if tienda_id:
         # si hay una tienda seleccionada, úsala como origen
         tienda_origen = get_object_or_404(Tienda, pk=tienda_id)
-        print(tienda_origen)
         # pasamos **solo** esa tienda (o bien la lista completa si quieres mostrar distancias al resto)
         mapa_html = generar_mapa_offline(
             ubicaciones=bodegas,
             direccion_origen=f"{tienda_origen.latitud},{tienda_origen.longitud}"
         )
+        
+        # Solo obtener recomendaciones si hay tienda seleccionada
+        if 'producto_id' in request.GET:
+            producto_id = request.GET['producto_id']
+            producto_seleccionado = Producto.objects.get(id=producto_id)
+            print(producto_seleccionado)
+        
+        # AQUÍ ESTÁ LA CORRECCIÓN: Solo llamar recomendar_bodega si hay tienda
+        recomendaciones = recomendar_bodega(tienda_id, producto_seleccionado)
+        
     else:
         # sin tienda seleccionada, mapa centrado en coordenadas por defecto
         mapa_html = generar_mapa_offline(ubicaciones=bodegas)
-        
-    if 'producto_id' in request.GET:
-        producto_id = request.GET['producto_id']
-        producto_seleccionado = Producto.objects.get(id=producto_id)
-        print(producto_seleccionado)
-    recomendaciones = recomendar_bodega(tienda_id, producto_seleccionado)
-    print(productos)
-    print(recomendaciones)
+        # NO llamamos recomendar_bodega cuando no hay tienda seleccionada
+
     
     return render(request, 'map.html', {
         'Bodega': bodegas,
         'tiendas': tiendas,
         'mapa': mapa_html,
         'tienda_seleccionada': tienda_id,
-        'producto_seleccionado':producto_seleccionado,
-        'recomendaciones':recomendaciones,
-        'productos':productos,
+        'producto_seleccionado': producto_seleccionado,
+        'recomendaciones': recomendaciones,
+        'productos': productos,
     })
 
 ########################################Existencia en tiendas ###################################################
