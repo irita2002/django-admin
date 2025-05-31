@@ -1,10 +1,191 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mapa Offline</title>
-</head>
-<body>
-    {{ mapa|safe }}
-    
-</body>
-</html>
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <!-- Tiendas -->
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Tiendas</h5>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in tiendas %}
+              <tr {% if tienda_seleccionada == t.id %}class="table-primary"{% endif %}>
+                <td>
+                  <a href="{% url 'inventario:ver_tiendas' t.id %}" class="stretched-link text-decoration-none">
+                    {{ t.nombre }}
+                  </a>
+                </td>
+                <td>{{ t.id }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Mapa de Ubicaciones</h5>
+        </div>
+        <div class="card-body p-0" style="height: 100%;">
+          <div id="map-container" style="width: 100%; height: 100%;">
+            {{ mapa|safe }}
+            <script>
+            document.addEventListener('DOMContentLoaded', function(){
+              // 1) Localiza el iframe generado por Folium
+              const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
+              if (!iframe) {
+                console.error("No encontré el iframe de Folium");
+                return;
+              }
+            
+              // 2) Cuando el iframe termine de cargarse, capturamos su window y buscamos el map_<id>
+              iframe.addEventListener('load', function(){
+                const win = iframe.contentWindow;
+                // Busca la variable global map_<uuid>
+                const mapVarName = Object.keys(win).find(k => k.startsWith('map_'));
+                if (!mapVarName) {
+                  console.error("Dentro del iframe no hallé ninguna map_<id>");
+                  return;
+                }
+                const foliumMap = win[mapVarName];
+                console.log("Mapa de Folium en iframe:", mapVarName, foliumMap);
+            
+                // 3) Ahora que tenemos la instancia de L.Map, enganchamos clicks en las filas
+                document.querySelectorAll('.recomendacion').forEach(fila => {
+                  fila.style.cursor = 'pointer';
+                  fila.addEventListener('click', () => {
+                    const lat = parseFloat(fila.dataset.lat);
+                    const lng = parseFloat(fila.dataset.lng);
+                    console.log("Voy a hacer zoom a:", lat, lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                      foliumMap.setView([lat, lng], 17);
+                    }
+                  });
+                });
+              });
+            });
+            </script>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Select + Recomendaciones -->
+    <div class="col-md-6">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0">Seleccione Producto</h6>
+        </div>
+        <div class="card-body">
+          <form method="get" action="">
+            <div class="mb-3">
+              <select name="producto_id" class="form-select">
+                <option value="">{% trans "Seleccione un producto" %}</option>
+                {% for producto in productos %}
+                  <option value="{{ producto.id }}"
+                    {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
+                    {{ producto.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "Filtrar" %}</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0">Recomendaciones</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-striped mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{% trans "Bodega" %}</th>
+                <th>{% trans "Necesidad" %}</th>
+                <th>{% trans "Distancia (m)" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in recomendaciones %}
+              <tr class="recomendacion" data-lat="{{ r.latitud }}" data-lng="{{ r.longitud }}">
+                <td>{{ r.bodega.nombre }}</td>
+                <td>{{ r.necesidad }}</td>
+                <td>{{ r.distancia_m }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  {% trans "No hay recomendaciones para mostrar." %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Espacio libre / futuros widgets -->
+    <div class="col-md-6">
+      <!-- Aquí podrías añadir paneles de detalle, gráficas, etc. -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      // Localiza el iframe de Folium
+      const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
+      if (!iframe) {
+        console.error("No encontré el iframe de Folium");
+        return;
+      }
+      iframe.addEventListener('load', function(){
+        const win = iframe.contentWindow;
+        const mapVar = Object.keys(win).find(k => k.startsWith('map_'));
+        if (!mapVar) {
+          console.error("No hallé map_<id> en el iframe");
+          return;
+        }
+        const foliumMap = win[mapVar];
+        console.log("Mapa Folium inicializado:", mapVar);
+
+        document.querySelectorAll('.recomendacion').forEach(fila => {
+          fila.style.cursor = 'pointer';
+          fila.addEventListener('click', () => {
+            const lat = parseFloat(fila.dataset.lat);
+            const lng = parseFloat(fila.dataset.lng);
+            console.log("Zoom a:", lat, lng);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              foliumMap.setView([lat, lng], 17);
+            }
+          });
+        });
+      });
+    });
+  </script>
+{% endblock %}

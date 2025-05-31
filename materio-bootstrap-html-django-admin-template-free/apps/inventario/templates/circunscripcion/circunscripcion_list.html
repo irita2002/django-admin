@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Listado de Circunscripciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-grid-1x2-fill me-2"></i>{% trans "Circunscripciones" %}</h5>
+      <!-- Botón AJAX para crear Circunscripción -->
+      <button
+        type="button"
+        class="btn btn-light new-circunscripcion-btn"
+        data-url="{% url 'inventario:circunscripcion_create' %}"
+        data-title="{% trans 'Nueva Circunscripción' %}">
+        <i class="bi bi-plus-lg text-success"></i> {% trans "Nueva Circunscripción" %}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Nombre" %}</th>
+              <th class="text-center">{% trans "Ancianos" %}</th>
+              <th class="text-center">{% trans "Niños" %}</th>
+              <th class="text-center">{% trans "Embarazadas" %}</th>
+              <th class="text-center">{% trans "Total Vulnerables" %}</th>
+              <th class="text-center">{% trans "Acciones" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in circunscripciones %}
+            <tr>
+              <td>
+                <i class="bi bi-people-fill text-secondary me-1"></i>
+                {{ c.nombre }}
+              </td>
+              <td class="text-center">{{ c.ancianos }}</td>
+              <td class="text-center">{{ c.ninos }}</td>
+              <td class="text-center">{{ c.embarazadas }}</td>
+              <td class="text-center">{{ c.total_vulnerables }}</td>
+              <td class="text-center">
+                <!-- Botón Editar (AJAX) -->
+                <button
+                  class="btn btn-sm btn-outline-primary me-1 edit-circunscripcion-btn"
+                  data-url="{% url 'inventario:circunscripcion_update' c.pk %}"
+                  data-title="{% trans 'Editar' %} {{ c.nombre }}"
+                  title="{% trans 'Editar' %}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <!-- Botón ELIMINAR (AJAX) -->
+                <button
+                  class="btn btn-sm btn-outline-danger delete-circunscripcion-btn"
+                  data-url="{% url 'inventario:circunscripcion_delete' c.pk %}"
+                  data-title="{% trans 'Eliminar' %} {{ c.nombre }}"
+                  title="{% trans 'Eliminar' %}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                {% trans "No hay circunscripciones registradas." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

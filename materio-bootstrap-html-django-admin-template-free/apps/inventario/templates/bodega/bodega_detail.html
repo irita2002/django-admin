@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Detalle de {{ bodega.nombre }}{% endblock %}
+
+{% block content %}
+  <h1>Bodega: {{ bodega.nombre }}</h1>
+  <p><strong>Código Postal:</strong> {{ bodega.cp }}</p>
+  <p><strong>Latitud:</strong> {{ bodega.latitud }}</p>
+  <p><strong>Longitud:</strong> {{ bodega.longitud }}</p>
+  <p><strong>Orden:</strong> {{ bodega.orden }}</p>
+  <p>
+    <a href="{% url 'inventario:bodega_update' bodega.pk %}">Editar</a> |
+    <a href="{% url 'inventario:bodega_list' %}">Volver al listado</a>
+  </p>
+{% endblock %}

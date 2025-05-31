@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Listado de Bodegas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{% trans "Bodegas" %}</h5>
+      <!-- Botón AJAX para crear Bodega -->
+      <button
+        type="button"
+        class="btn btn-light new-bodega-btn"
+        data-url="{% url 'inventario:bodega_create' %}"
+        data-title="{% trans 'Nueva Bodega' %}">
+        <i class="bi bi-plus-lg text-success"></i> {% trans "Nueva Bodega" %}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Nombre" %}</th>
+              <th>{% trans "CP" %}</th>
+              <th>{% trans "Cantidad Núcleos" %}</th>
+              <th>{% trans "Latitud" %}</th>
+              <th>{% trans "Longitud" %}</th>
+              <th>{% trans "Orden" %}</th>
+              <th class="text-center">{% trans "Acciones" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bodegas %}
+            <tr>
+              <td>
+                <i class="bi bi-geo me-1 text-secondary"></i>
+                {{ b.nombre }}
+              </td>
+              <td>{{ b.cp }}</td>
+              <td>{{ b.cantidad_nucleos }}</td>
+              <td>{{ b.latitud }}</td>
+              <td>{{ b.longitud }}</td>
+              <td>{{ b.orden }}</td>
+              <td class="text-center">
+                <!-- Botón Editar -->
+                <button
+                  class="btn btn-sm btn-outline-primary me-1 edit-bodega-btn"
+                  data-url="{% url 'inventario:bodega_update' b.pk %}"
+                  data-title="{% trans 'Editar' %} {{ b.nombre }}"
+                  title="{% trans 'Editar' %}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <!-- Botón ELIMINAR, ahora con clase .delete-bodega-btn -->
+                <button
+                  class="btn btn-sm btn-outline-danger delete-bodega-btn"
+                  data-url="{% url 'inventario:bodega_delete' b.pk %}"
+                  data-title="{% trans 'Eliminar' %} {{ b.nombre }}"
+                  title="{% trans 'Eliminar' %}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                <i class="bi bi-box-seam me-2"></i>{% trans "No hay bodegas registradas." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

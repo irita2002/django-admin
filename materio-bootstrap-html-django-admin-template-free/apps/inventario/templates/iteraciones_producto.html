@@ -1,71 +1,122 @@
-{% extends layout_path %}
-
-{% load static %}
-{% load i18n %}
+{% extends "base.html" %}
+{% load static i18n %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="card">
-  <h5 class="card-header">Iteraciones de Entrega</h5>
-  <div class="card-body">
-    <form method="get" class="mb-4">
-      <div class="row">
-        <div class="col-md-6">
-          <select name="producto_id" class="form-select">
-            <option value="">Seleccione un producto</option>
-            {% for producto in productos %}
-              <option value="{{ producto.id }}" 
-                {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
-                {{ producto.nombre }}
-              </option>
-            {% endfor %}
-          </select>
-          <select name="iteracion_id" class="form-select">
-            <option value="">Seleccione una Iteracion</option>
-            {% for iteracion in iteracion_t %}
-              <option value="{{ iteracion.numero_iteracion }}" 
-                {% if True %}selected{% endif %}>
-                {{ iteracion.numero_iteracion }}
-              </option>
-            {% endfor %}
-          </select>
+<div class="container-fluid py-4">
+  <!-- Card principal -->
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{% trans "Iteraciones de Entrega" %}</h5>
+    </div>
+    <div class="card-body">
+
+      <!-- Formulario de selección de producto e iteración -->
+      <form method="get" class="row row-cols-lg-auto g-3 align-items-end mb-4">
+        <!-- Selección de Producto -->
+        <div class="col-12 col-md-6">
+          <div class="form-floating">
+            <select name="producto_id" class="form-select">
+              <option value="" disabled selected>{% trans "Seleccione un producto" %}</option>
+              {% for producto in productos %}
+                <option value="{{ producto.id }}"
+                  {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
+                  {{ producto.nombre }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="producto_id">{% trans "Producto" %}</label>
+          </div>
         </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-primary">Buscar</button>
+
+        <!-- Selección de Iteración -->
+        <div class="col-12 col-md-3">
+          <div class="form-floating">
+            <select name="iteracion_id" class="form-select">
+              <option value="" disabled selected>{% trans "Seleccione Iteración" %}</option>
+
+              {% for iteracion in iteracion_t %}
+                <option value="{{ iteracion.numero_iteracion }}"
+                  {% if iteracion_id|stringformat:"s" == iteracion.numero_iteracion|stringformat:"s" %}selected{% endif %}>
+                  {{ iteracion.numero_iteracion }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="iteracion_id">{% trans "Iteración" %}</label>
+          </div>
         </div>
-      </div>
-    </form>
 
-    {% if producto_seleccionado %}
-      <h4 class="mb-4">{{ producto_seleccionado.nombre }}</h4>
-      
-      <div class="table-responsive text-nowrap">
-        <table class="table">
-          <thead>
-            <tr class="table-nowrap">
-              <th>Bodega</th>
-              <th>Orden</th>
-            </tr>
-          </thead>
-          <tbody class="table-border-bottom-0">
-            {% for bodega in bodegas %}
-              <tr class="table-default">
-                <td>{{ bodega.nombre }}</td>
-                <td>{{ bodega.orden }}</td>
-                {% for transferencia in transferencias %}
-                {% if transferencia.bodega.nombre == bodega.nombre %}
+        <!-- Botón Buscar -->
+        <div class="col-12 col-md-2">
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-search me-1"></i>{% trans "Buscar" %}
+          </button>
+        </div>
+      </form>
 
-                <td>{{transferencia.cantidad}} ({{transferencia.fecha_transferencia|date:"d/m/Y"}})</td>
-                {% endif %}
+      {% if producto_seleccionado %}
+        <!-- Título del Producto Seleccionado -->
+        <h4 class="mb-4 text-secondary">
+          <i class="bi bi-box-seam me-2"></i>{{ producto_seleccionado.nombre }}
+        </h4>
 
-                {% endfor %}
-
+        <!-- Tabla de resultados -->
+        <div class="table-responsive">
+          <table class="table table-striped table-hover border">
+            <thead class="table-dark">
+              <tr>
+                <th scope="col">{% trans "Bodega" %}</th>
+                <th scope="col">{% trans "Orden" %}</th>
+                <th scope="col">{% trans "Cantidad (Fecha)" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bodega in bodegas %}
+              <tr>
+                <td class="align-middle">{{ bodega.nombre }}</td>
+                <td class="align-middle">{{ bodega.orden }}</td>
+                <td class="align-middle">
+                  {% for envio in transferencias %}
+                    {% if envio.bodega.id == bodega.id %}
+                      {{ envio.cantidad }}
+                      <small class="text-muted">({{ envio.fecha_transferencia|date:"d/m/Y" }})</small>
+                    {% endif %}
+                  {% empty %}
+                    <span class="text-muted">{% trans "Sin datos" %}</span>
+                  {% endfor %}
+                </td>
               </tr>
             {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      
-    {% endif %}
+            
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+    </div>
   </div>
 </div>
 {% endblock %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector("form");
+    const iteracionSelect = document.querySelector('select[name="iteracion_id"]');
+    const alertBox = document.getElementById("iteracion-alert");
+
+    form.addEventListener("submit", function (event) {
+      if (iteracionSelect.value.trim() === "") {
+        event.preventDefault(); // Detiene envío
+        alertBox.classList.remove("d-none"); // Muestra alerta
+        iteracionSelect.focus();
+
+        // Oculta automáticamente después de 3 segundos
+        setTimeout(() => {
+          alertBox.classList.add("d-none");
+        }, 3000);
+      }
+    });
+  });
+</script>
+
+
+

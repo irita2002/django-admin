@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "apps.form_layouts",
     "apps.tables",
     "apps.inventario",
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
@@ -164,6 +165,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
     BASE_DIR / "src" / "assets",
+    BASE_DIR / "apps" / "inventario" / "static",
 ]
 
 # Default URL on which Django application runs for specific environment

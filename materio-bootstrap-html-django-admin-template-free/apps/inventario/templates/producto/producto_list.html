@@ -1,0 +1,75 @@
+{# templates/product/product_list.html #}
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Listado de Productos{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{% trans "Productos" %}</h5>
+      <!-- Botón AJAX para "Nuevo Producto" -->
+      <button
+        type="button"
+        class="btn btn-light btn-sm new-product-btn"
+        data-url="{% url 'inventario:create' %}"
+        data-title="{% trans 'Nuevo Producto' %}">
+        <i class="bi bi-plus-lg text-success"></i> {% trans "Nuevo Producto" %}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Nombre" %}</th>
+              <th class="text-end">{% trans "En Tiendas" %}</th>
+              <th class="text-end">{% trans "En Bodegas" %}</th>
+              <th class="text-end">{% trans "Total" %}</th>
+              <th class="text-center">{% trans "Acciones" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for prod in productos %}
+            <tr>
+              <td>
+                <i class="bi bi-card-list text-secondary me-1"></i>
+                {{ prod.nombre }}
+              </td>
+              <td class="text-end">{{ prod.cantidad_tiendas|default:0 }}</td>
+              <td class="text-end">{{ prod.cantidad_bodegas|default:0 }}</td>
+              <td class="text-end">{{ prod.total|default:0 }}</td>
+              <td class="text-center">
+                <!-- Botón Editar (AJAX) -->
+                <button
+                  class="btn btn-sm btn-outline-primary me-1 edit-product-btn"
+                  data-url="{% url 'inventario:update' prod.pk %}"
+                  data-title="{% trans 'Editar' %} {{ prod.nombre }}"
+                  title="{% trans 'Editar' %}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <!-- Botón Eliminar (AJAX) -->
+                <button
+                  class="btn btn-sm btn-outline-danger delete-product-btn"
+                  data-url="{% url 'inventario:delete' prod.pk %}"
+                  data-title="{% trans 'Eliminar' %} {{ prod.nombre }}"
+                  title="{% trans 'Eliminar' %}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-box-seam me-2"></i>{% trans "No hay productos registrados." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

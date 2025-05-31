@@ -1,0 +1,55 @@
+<!--
+<footer class="footer">
+  <p>&copy; 2024 CTInnovate Technology</p>
+</footer>
+-->
+{% load static %}
+<!doctype html>
+<html lang="es" data-bs-theme="auto">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Favicons -->
+
+
+    <style>
+      .main {
+        flex: 1; /* Permite que la sección principal crezca y ocupe el espacio restante */
+        flex-direction: column;
+        min-height: 100vh; 
+    }
+    </style>
+
+    
+  </head>
+
+  <footer class="d-flex flex-wrap justify-content-between align-items-center py-3" style="background-color: #745bc1; width: 100%; margin: 0; border-top:2px solid #fcc350 !important;">
+    <p class="col-md-4 mb-0 text-body-secondary" style="color: #f8f9fa; padding: 20px">&copy; 2024 Hubinab Rewards</p>
+
+    <a href="/" class="col-md-4 d-flex align-items-center justify-content-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+      <img class="bi me-2" width="20%" height="20%" src="{% static 'images/logoRed2.png' %}">
+    </a>
+
+    <ul class="nav col-md-2 justify-content-end">
+      <li class="nav-item" ><a href="{% url 'inicio' %}" class="nav-link px-2 text-body-secondary"style="color: white">Inicio</a></li>
+      <li class="nav-item" ><a href="{% url 'aceptar_terminos' %}" data-bs-toggle="modal" data-bs-target="#staticBackdrop" class="nav-link px-2 text-body-secondary"style="color: white">Términos y Condiciones de Uso</a></li>
+    </ul>
+  </footer>
+
+<script src="{% static 'js/jquery.min.js'%}"></script>
+<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js'%}"></script>
+<script>
+  let primera = false;
+        let terminos_aceptados = false;
+        if ("{{ is_first_time }}" == "True"){
+            primera = true;
+        }
+        if ("{{ terminos_aceptados }}" == "True"){
+            terminos_aceptados = true;
+        }
+        if (primera || !terminos_aceptados) {
+            document.getElementById("terminos-b").click();
+        }
+</script>
+</html>

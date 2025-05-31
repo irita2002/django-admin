@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Listado de Tiendas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-shop-window me-2"></i>{% trans "Tiendas" %}</h5>
+      <!-- Botón AJAX para crear Tienda -->
+      <button
+        type="button"
+        class="btn btn-success new-tienda-btn"
+        data-url="{% url 'inventario:tienda_create' %}"
+        data-title="{% trans 'Nueva Tienda' %}">
+        <i class="bi bi-plus-lg"></i> {% trans "Nueva Tienda" %}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Nombre" %}</th>
+              <th>{% trans "Latitud" %}</th>
+              <th>{% trans "Longitud" %}</th>
+              <th>{% trans "Tipo" %}</th>
+              <th class="text-center">{% trans "Acciones" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tiendas %}
+            <tr>
+              <td>
+                <i class="bi bi-geo-alt-fill text-secondary me-1"></i>
+                {{ t.nombre }}
+              </td>
+              <td>{{ t.latitud }}</td>
+              <td>{{ t.longitud }}</td>
+              <td>
+                {% if t.tipo == "urban" %}
+                  <span class="badge bg-info text-dark">{% trans "Urbana" %}</span>
+                {% elif t.tipo == "rural" %}
+                  <span class="badge bg-warning text-dark">{% trans "Rural" %}</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ t.tipo|capfirst }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <!-- Botón “Editar” igual que antes -->
+                <button
+                  class="btn btn-sm btn-outline-primary me-1 edit-btn"
+                  data-url="{% url 'inventario:tienda_update' t.pk %}"
+                  data-title="{% trans 'Editar' %} {{ t.nombre }}"
+                  title="{% trans 'Editar' %}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <!-- NUEVO: Botón “Eliminar” disparando modal AJAX -->
+                <button
+                  class="btn btn-sm btn-outline-danger delete-btn"
+                  data-url="{% url 'inventario:tienda_delete' t.pk %}"
+                  data-title="{% trans 'Eliminar' %} {{ t.nombre }}"
+                  title="{% trans 'Eliminar' %}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-shop-slash me-2"></i>{% trans "No hay tiendas registradas." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

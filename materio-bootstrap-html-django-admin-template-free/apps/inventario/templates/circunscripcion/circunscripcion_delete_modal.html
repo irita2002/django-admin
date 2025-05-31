@@ -1,0 +1,24 @@
+{% load i18n %}
+
+<form method="post" action="{% url 'inventario:circunscripcion_delete' object.pk %}">
+  {% csrf_token %}
+  <div class="text-center py-4">
+    <h5 class="text-danger">
+      {% trans "¿Eliminar la circunscripción" %} “{{ object.nombre }}”?
+    </h5>
+    <p class="text-muted">{% trans "Esta acción no se puede deshacer." %}</p>
+  </div>
+  <div class="d-flex justify-content-end">
+    <button
+      type="button"
+      class="btn btn-secondary me-2"
+      data-bs-dismiss="modal">
+      <i class="bi bi-x-circle me-1"></i>
+      {% trans "Cancelar" %}
+    </button>
+    <button type="submit" class="btn btn-danger">
+      <i class="bi bi-trash me-1"></i>
+      {% trans "Sí, eliminar" %}
+    </button>
+  </div>
+</form>

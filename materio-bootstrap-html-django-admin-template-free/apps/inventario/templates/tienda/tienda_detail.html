@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Detalle de {{ tienda.nombre }}{% endblock %}
+
+{% block content %}
+  <h1>Tienda: {{ tienda.nombre }}</h1>
+  <p><strong>Latitud:</strong> {{ tienda.latitud }}</p>
+  <p><strong>Longitud:</strong> {{ tienda.longitud }}</p>
+  <p><strong>Tipo:</strong> {{ tienda.tipo }}</p>
+  <p>
+    <a href="{% url 'inventario:tienda_update' tienda.pk %}">Editar</a> |
+    <a href="{% url 'inventario:tienda_list' %}">Volver al listado</a>
+  </p>
+{% endblock %}

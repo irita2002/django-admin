@@ -1,4 +1,4 @@
-{% extends layout_path %}
+{% extends "base.html" %}
 
 {% load static %}
 {% load i18n %}
@@ -6,20 +6,21 @@
 {% block content %}
 <html>
 <head>
-    <title>Existencias Totales</title>
-    <style>
-        table { margin: 20px 0; border-collapse: collapse; width: 100%; }
-        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #f5f5f5; }
-        .total-row { font-weight: bold; }
-    </style>
+    <div class="card">
+    <title>Existencias Existencias Totales</title>
+
 </head>
 <body>
-    <h1>Consulta de existencias completas</h1>
+    <h5 class="card-header">Consulta de existencias completas</h5>
+
+  <div class="card-body">
     
-    <form method="get">
-        <select name="producto_id">
-            <option value="">Seleccione un producto</option>
+    <form method="get" class="mb-4" >
+      <div class="row">
+        <div class="col-md-6">
+
+        <select name="producto_id" class="form-select">
+            <option  value="">Seleccione un producto</option>
             {% for producto in productos %}
                 <option value="{{ producto.id }}" 
                     {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
@@ -27,16 +28,27 @@
                 </option>
             {% endfor %}
         </select>
-        <button type="submit">Consultar</button>
-    </form>
+</div>
 
+        <div class="col-md-2">
+
+        <button class="btn btn-primary" type="submit">Consultar</button>
+    </div>
+
+    </form>
+    <div class="col-md-2">
     {% if producto_seleccionado %}
-        <h2>{{ producto_seleccionado.nombre }}</h2>
+    <p class="display-5">{{ producto_seleccionado.nombre }}</p>
+</div>
+</div>
+</div>
+
+</div>
         
         <!-- Tabla para Bodegas -->
         <h3>Existencias en Bodegas</h3>
-        <table>
-            <thead>
+        <table class="table table-striped border border-black">
+            <thead class="table-dark">
                 <tr>
                     <th>Bodega</th>
                     <th>Cantidad</th>
@@ -64,8 +76,8 @@
 
         <!-- Tabla para Tiendas -->
         <h3>Existencias en Tiendas</h3>
-        <table>
-            <thead>
+        <table class="table table-striped border border-black">
+            <thead class="table-dark">
                 <tr>
                     <th>Tienda</th>
                     <th>Cantidad</th>

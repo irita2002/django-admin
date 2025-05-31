@@ -1,0 +1,30 @@
+{# templates/product/product_form.html #}
+{% load widget_tweaks i18n %}
+
+<form method="post" action="{% if object %}{% url 'inventario:update' object.pk %}{% else %}{% url 'inventario:create' %}{% endif %}">
+  {% csrf_token %}
+  <div class="row g-3">
+    <!-- Nombre -->
+    <div class="col-md-6 form-floating">
+      {{ form.nombre|add_class:"form-control" }}
+      <label for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+    </div>
+    <!-- (Agrega aquí los demás campos que tenga tu modelo Producto) -->
+    <!-- Supongamos que Producto tiene 'cantidad' y 'descripcion' -->
+    <div class="col-md-3 form-floating invisible" >
+      {{ form.cantidad|add_class:"form-control" }}
+      <label for="{{ form.precio_venta.id_for_label }}">{{ form.cantidad.label }}</label>
+    </div>
+
+    <!-- Si hay más campos, repítelos dentro de .form-floating -->
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+      <i class="bi bi-x-circle me-1"></i> {% trans "Cancelar" %}
+    </button>
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-save2 me-1"></i> {% if object %}{% trans "Actualizar" %}{% else %}{% trans "Crear" %}{% endif %}
+    </button>
+  </div>
+</form>

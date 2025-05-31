@@ -1,0 +1,36 @@
+{% load widget_tweaks %}
+<form method="post" action="{% if object %}{% url 'inventario:circunscripcion_update' object.pk %}{% else %}{% url 'inventario:circunscripcion_create' %}{% endif %}">
+  {% csrf_token %}
+  <div class="row g-3">
+    <!-- Nombre -->
+    <div class="col-md-6 form-floating">
+      {{ form.nombre|add_class:"form-control" }}
+      <label for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+    </div>
+    <!-- Ancianos -->
+    <div class="col-md-2 form-floating">
+      {{ form.ancianos|add_class:"form-control" }}
+      <label for="{{ form.ancianos.id_for_label }}">{{ form.ancianos.label }}</label>
+    </div>
+    <!-- Niños -->
+    <div class="col-md-2 form-floating">
+      {{ form.ninos|add_class:"form-control" }}
+      <label for="{{ form.ninos.id_for_label }}">{{ form.ninos.label }}</label>
+    </div>
+    <!-- Embarazadas -->
+    <div class="col-md-2 form-floating">
+      {{ form.embarazadas|add_class:"form-control" }}
+      <label for="{{ form.embarazadas.id_for_label }}">{{ form.embarazadas.label }}</label>
+    </div>
+
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+      <i class="bi bi-x-circle me-1"></i>Cancelar
+    </button>
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-save2 me-1"></i>Guardar
+    </button>
+  </div>
+</form>
