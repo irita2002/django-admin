@@ -3,8 +3,8 @@ from .models import *
 # Register your models here.
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ( 'nombre','cantidad')
-    search_fields = ( 'cantidad',)
+    list_display = ( 'nombre',)
+    search_fields = ( 'nombre',)
 
 @admin.register(Tienda)
 class TiendaAdmin(admin.ModelAdmin):

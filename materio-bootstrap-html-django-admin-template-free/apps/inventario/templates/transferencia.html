@@ -1,61 +1,78 @@
 {% extends "base.html" %}
-
 {% load static %}
 {% load i18n %}
+{% load widget_tweaks %}
+
+{% block title %}Transferir Productos{% endblock %}
 
 {% block content %}
-<div class="card">
-  <h5 class="card-header">Transferir Productos</h5>
-  <div class="card-body">
-    {% if messages %} {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible mb-4" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>{% trans "Transferir Productos" %}</h5>
     </div>
-    {% endfor %} {% endif %}
+    <div class="card-body">
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible mb-4" role="alert">
+          <i class="bi bi-info-circle me-2"></i>{{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+      {% endif %}
 
-    <form method="post">
-      {% csrf_token %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <!-- Producto a transferir -->
+          <div class="col-md-6 form-floating">
+            {{ form.producto|add_class:"form-select" }}
+            <label for="{{ form.producto.id_for_label }}">{% trans "Producto a transferir" %}</label>
+          </div>
 
-      <div class="row g-3 mb-4">
-        <div class="col-md-6">
-          <label class="form-label">Producto a transferir</label>
-          {{ form.producto }}
+          <!-- Cantidad -->
+          <div class="col-md-6 form-floating">
+            {{ form.cantidad|add_class:"form-control" }}
+            <label for="{{ form.cantidad.id_for_label }}">{% trans "Cantidad" %}</label>
+          </div>
+
+          <!-- Tienda de origen -->
+          <div class="col-md-6 form-floating">
+            {{ form.tienda|add_class:"form-select" }}
+            <label for="{{ form.tienda.id_for_label }}">{% trans "Tienda de origen" %}</label>
+          </div>
+
+          <!-- Bodega de destino -->
+          <div class="col-md-6 form-floating">
+            {{ form.bodega|add_class:"form-select" }}
+            <label for="{{ form.bodega.id_for_label }}">{% trans "Bodega de destino" %}</label>
+          </div>
+
+          <!-- Número de iteración -->
+          <div class="col-md-6 form-floating">
+            {{ form.numero_iteracion|add_class:"form-control" }}
+            <label for="{{ form.numero_iteracion.id_for_label }}">{% trans "Número de Iteración" %}</label>
+          </div>
+
+          <!-- Fecha -->
+          <div class="col-md-6 form-floating">
+            {{ form.fecha_transferencia|add_class:"form-control" }}
+            <label for="{{ form.fecha_transferencia.id_for_label }}">{% trans "Fecha de Transferencia" %}</label>
+          </div>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Cantidad</label>
-          {{ form.cantidad }}
+        <div class="mt-4 d-flex justify-content-end">
+          <a href="{% url 'inventario:mapa_principal' %}" class="btn btn-secondary me-2">
+            <i class="bi bi-x-circle me-1"></i>
+            {% trans "Cancelar" %}
+          </a>
+          <button type="submit" class="btn btn-warning text-dark">
+            <i class="bi bi-arrow-left-right me-1"></i>
+            {% trans "Realizar Transferencia" %}
+          </button>
         </div>
-      </div>
-
-      <div class="row g-3 mb-4">
-        <div class="col-md-6">
-          <label class="form-label">Tienda de origen</label>
-          {{ form.tienda }}
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Bodega de destino</label>
-          {{ form.bodega }}
-        </div>
-      </div>
-        <div class="col-md-6">
-          <label class="form-label">Numero de Iteracion</label>
-          {{ form.numero_iteracion }}
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Fecha</label>
-          {{ form.fecha_transferencia }}
-        </div>
-      </div>
-
-      <div class="">
-        <button type="submit" class="btn btn-primary btn-lg">
-          <i class="bx bx-transfer-alt me-2"></i> Realizar Transferencia
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}

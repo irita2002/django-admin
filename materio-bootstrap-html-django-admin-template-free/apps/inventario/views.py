@@ -246,7 +246,7 @@ from .models import Producto
 # ———————————————————————————————
 class ProductoCreateView(CreateView):
     model = Producto
-    fields = ["nombre","cantidad"   ]  # Ajusta según tus campos reales
+    fields = ["nombre"  ]  # Ajusta según tus campos reales
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
 
@@ -282,7 +282,7 @@ class ProductoCreateView(CreateView):
 # ———————————————————————————————
 class ProductoUpdateView(UpdateView):
     model = Producto
-    fields = ["nombre","cantidad"]  # Mismos campos que en CreateView
+    fields = ["nombre"]  # Mismos campos que en CreateView
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
 
@@ -833,4 +833,150 @@ def ver_tiendas(request, tienda_id=None):
         'productos':productos,
     })
 
+########################################Existencia en tiendas ###################################################
+# apps/inventario/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from .models import Tienda, Producto, ExistenciasTienda
+from .forms import ExistenciasTiendaForm
 
+def agregar_existencias_tienda(request, tienda_id=None):
+    """Vista para agregar o actualizar existencias de productos en una tienda"""
+    tienda = None
+    if tienda_id:
+        tienda = get_object_or_404(Tienda, id=tienda_id)
+    
+    tiendas = Tienda.objects.all()
+    productos = Producto.objects.all()
+    
+    if request.method == 'POST':
+        tienda_id = request.POST.get('tienda')
+        producto_id = request.POST.get('producto')
+        cantidad = request.POST.get('cantidad')
+        
+        try:
+            tienda_obj = get_object_or_404(Tienda, id=tienda_id)
+            producto_obj = get_object_or_404(Producto, id=producto_id)
+            cantidad = int(cantidad)
+            
+            # Verificar si ya existe una existencia para este producto en esta tienda
+            existencia, created = ExistenciasTienda.objects.get_or_create(
+                tienda=tienda_obj,
+                producto=producto_obj,
+                defaults={'cantidad': cantidad}
+            )
+            
+            if not created:
+                # Si ya existe, actualizar la cantidad (sumar)
+                existencia.cantidad += cantidad
+                existencia.save()
+                messages.success(request, f'Se actualizaron las existencias de {producto_obj.nombre} en {tienda_obj.nombre}. Nueva cantidad: {existencia.cantidad}')
+            else:
+                messages.success(request, f'Se agregaron {cantidad} unidades de {producto_obj.nombre} a {tienda_obj.nombre}')
+            
+            return redirect('inventario:agregar_existencias_tienda')
+            
+        except ValueError:
+            messages.error(request, 'La cantidad debe ser un número válido')
+        except Exception as e:
+            messages.error(request, f'Error al agregar existencias: {str(e)}')
+    
+    # Obtener existencias actuales si hay una tienda seleccionada
+    existencias_actuales = []
+    if tienda:
+        existencias_actuales = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
+    
+    context = {
+        'tiendas': tiendas,
+        'productos': productos,
+        'tienda_seleccionada': tienda,
+        'existencias_actuales': existencias_actuales,
+    }
+    
+    return render(request, 'agregar_existencias_tienda.html', context)
+
+def listar_existencias_tienda(request, tienda_id):
+    """Vista para listar todas las existencias de una tienda específica"""
+    tienda = get_object_or_404(Tienda, id=tienda_id)
+    existencias = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
+    
+    context = {
+        'tienda': tienda,
+        'existencias': existencias,
+    }
+    
+    return render(request, 'inventario/listar_existencias_tienda.html', context)
+
+def obtener_existencias_tienda_ajax(request, tienda_id):
+    """Vista AJAX para obtener existencias de una tienda"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            tienda = get_object_or_404(Tienda, id=tienda_id)
+            existencias = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
+            data = []
+            for existencia in existencias:
+                data.append({
+                    'id': existencia.id,
+                    'producto_id': existencia.producto.id,
+                    'producto_nombre': existencia.producto.nombre,
+                    'cantidad': existencia.cantidad,
+                })
+            return JsonResponse({'success': True, 'existencias': data})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Solicitud no válida'})
+
+@require_http_methods(["POST"])
+def actualizar_existencia_ajax(request):
+    """Vista AJAX para actualizar existencia específica"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            tienda_id = request.POST.get('tienda_id')
+            producto_id = request.POST.get('producto_id')
+            nueva_cantidad = request.POST.get('cantidad')
+            
+            tienda = get_object_or_404(Tienda, id=tienda_id)
+            producto = get_object_or_404(Producto, id=producto_id)
+            nueva_cantidad = int(nueva_cantidad)
+            
+            existencia, created = ExistenciasTienda.objects.get_or_create(
+                tienda=tienda,
+                producto=producto,
+                defaults={'cantidad': nueva_cantidad}
+            )
+            
+            if not created:
+                existencia.cantidad = nueva_cantidad
+                existencia.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'Existencia de {producto.nombre} actualizada correctamente a {nueva_cantidad} unidades'
+            })
+            
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'La cantidad debe ser un número válido'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error al actualizar: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Solicitud no válida'})
+
+def actualizar_existencia_tienda(request, existencia_id):
+    """Vista para actualizar una existencia específica"""
+    existencia = get_object_or_404(ExistenciasTienda, id=existencia_id)
+    
+    if request.method == 'POST':
+        nueva_cantidad = request.POST.get('cantidad')
+        try:
+            existencia.cantidad = int(nueva_cantidad)
+            existencia.save()
+            messages.success(request, f'Existencia actualizada correctamente')
+        except ValueError:
+            messages.error(request, 'La cantidad debe ser un número válido')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar: {str(e)}')
+    
+    return redirect('inventario:listar_existencias_tienda', tienda_id=existencia.tienda.id)

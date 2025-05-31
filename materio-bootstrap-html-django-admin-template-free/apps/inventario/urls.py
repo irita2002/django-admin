@@ -20,6 +20,16 @@ urlpatterns = [
     path("tiendas/<int:pk>/", views.TiendaDetailView.as_view(), name="tienda_detail"),
     path("tiendas/<int:pk>/editar/", views.TiendaUpdateView.as_view(), name="tienda_update"),
     path("tiendas/<int:pk>/eliminar/", views.TiendaDeleteView.as_view(), name="tienda_delete"),
+    # URLs para gestión de existencias en tiendas
+    path('tiendas/existencias/', views.agregar_existencias_tienda, name='agregar_existencias_tienda'),
+    path('tiendas/existencias/<int:tienda_id>/', views.agregar_existencias_tienda, name='agregar_existencias_tienda_id'),
+    path('tiendas/<int:tienda_id>/existencias/', views.listar_existencias_tienda, name='listar_existencias_tienda'),
+    path('existencias/actualizar/<int:existencia_id>/', views.actualizar_existencia_tienda, name='actualizar_existencia_tienda'),
+    
+    # URLs AJAX
+    path('ajax/tienda/<int:tienda_id>/existencias/', views.obtener_existencias_tienda_ajax, name='obtener_existencias_tienda_ajax'),
+    path('ajax/actualizar-existencia/', views.actualizar_existencia_ajax, name='actualizar_existencia_ajax'),
+    
     # CRUD Bodega
     path("bodegas/",views.BodegaListView.as_view(),name="bodega_list"),
     path("bodegas/nueva/",views.BodegaCreateView.as_view(),name="bodega_create"),

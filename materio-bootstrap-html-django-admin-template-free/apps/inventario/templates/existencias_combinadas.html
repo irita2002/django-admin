@@ -1,113 +1,177 @@
 {% extends "base.html" %}
-
 {% load static %}
 {% load i18n %}
+{% load widget_tweaks %}
+
+{% block title %}Existencias Totales{% endblock %}
 
 {% block content %}
-<html>
-<head>
-    <div class="card">
-    <title>Existencias Existencias Totales</title>
-
-</head>
-<body>
-    <h5 class="card-header">Consulta de existencias completas</h5>
-
-  <div class="card-body">
-    
-    <form method="get" class="mb-4" >
-      <div class="row">
-        <div class="col-md-6">
-
-        <select name="producto_id" class="form-select">
-            <option  value="">Seleccione un producto</option>
-            {% for producto in productos %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>{% trans "Consulta de Existencias Completas" %}</h5>
+    </div>
+    <div class="card-body">
+      <!-- Formulario de consulta -->
+      <form method="get" class="mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-8 form-floating">
+            <select name="producto_id" class="form-select" id="producto_select">
+              <option value="">{% trans "Seleccione un producto" %}</option>
+              {% for producto in productos %}
                 <option value="{{ producto.id }}" 
                     {% if producto_seleccionado and producto.id == producto_seleccionado.id %}selected{% endif %}>
-                    {{ producto.nombre }} (Actual: {{ producto.cantidad }})
+                    {{ producto.nombre }} 
                 </option>
-            {% endfor %}
-        </select>
-</div>
+              {% endfor %}
+            </select>
+            <label for="producto_select">{% trans "Producto" %}</label>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-info text-white w-100" type="submit">
+              <i class="bi bi-search me-1"></i>
+              {% trans "Consultar" %}
+            </button>
+          </div>
+        </div>
+      </form>
 
-        <div class="col-md-2">
+      {% if producto_seleccionado %}
+        <!-- Información del producto seleccionado -->
+        <div class="alert alert-light border-info mb-4">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-box-seam text-info me-3" style="font-size: 2rem;"></i>
+            <div>
+              <h4 class="mb-1 text-info">{{ producto_seleccionado.nombre }}</h4>
+              <p class="mb-0 text-muted">{% trans "Producto seleccionado para consulta de existencias" %}</p>
+            </div>
+          </div>
+        </div>
 
-        <button class="btn btn-primary" type="submit">Consultar</button>
-    </div>
+        <div class="row g-4">
+          <!-- Tabla para Bodegas -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="bi bi-building me-2"></i>{% trans "Existencias en Bodegas" %}</h6>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>{% trans "Bodega" %}</th>
+                        <th class="text-end">{% trans "Cantidad" %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for existencia in existencias_bodegas %}
+                        <tr>
+                          <td>
+                            <i class="bi bi-geo me-1 text-secondary"></i>
+                            {{ existencia.bodega.nombre }}
+                          </td>
+                          <td class="text-end">
+                            <span class="badge bg-success">{{ existencia.cantidad }}</span>
+                          </td>
+                        </tr>
+                      {% empty %}
+                        <tr>
+                          <td colspan="2" class="text-center text-muted py-4">
+                            <i class="bi bi-box-seam me-2"></i>{% trans "No hay existencias en bodegas" %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot class="table-success">
+                      <tr>
+                        <th>{% trans "Total Bodegas" %}</th>
+                        <th class="text-end">
+                          <span class="badge bg-dark fs-6">{{ total_bodegas }}</span>
+                        </th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    </form>
-    <div class="col-md-2">
-    {% if producto_seleccionado %}
-    <p class="display-5">{{ producto_seleccionado.nombre }}</p>
-</div>
-</div>
-</div>
-
-</div>
-        
-        <!-- Tabla para Bodegas -->
-        <h3>Existencias en Bodegas</h3>
-        <table class="table table-striped border border-black">
-            <thead class="table-dark">
-                <tr>
-                    <th>Bodega</th>
-                    <th>Cantidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for existencia in existencias_bodegas %}
-                    <tr>
-                        <td>{{ existencia.bodega.nombre }}</td>
-                        <td>{{ existencia.cantidad }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="2">No hay existencias en bodegas</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td>Total Bodegas</td>
-                    <td>{{ total_bodegas }}</td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <!-- Tabla para Tiendas -->
-        <h3>Existencias en Tiendas</h3>
-        <table class="table table-striped border border-black">
-            <thead class="table-dark">
-                <tr>
-                    <th>Tienda</th>
-                    <th>Cantidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for existencia in existencias_tiendas %}
-                    <tr>
-                        <td>{{ existencia.tienda.nombre }}</td>
-                        <td>{{ existencia.cantidad }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="2">No hay existencias en tiendas</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td>Total Tiendas</td>
-                    <td>{{ total_tiendas }}</td>
-                </tr>
-            </tfoot>
-        </table>
+          <!-- Tabla para Tiendas -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-shop-window me-2"></i>{% trans "Existencias en Tiendas" %}</h6>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>{% trans "Tienda" %}</th>
+                        <th class="text-end">{% trans "Cantidad" %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for existencia in existencias_tiendas %}
+                        <tr>
+                          <td>
+                            <i class="bi bi-geo-alt-fill text-secondary me-1"></i>
+                            {{ existencia.tienda.nombre }}
+                          </td>
+                          <td class="text-end">
+                            <span class="badge bg-primary">{{ existencia.cantidad }}</span>
+                          </td>
+                        </tr>
+                      {% empty %}
+                        <tr>
+                          <td colspan="2" class="text-center text-muted py-4">
+                            <i class="bi bi-shop-slash me-2"></i>{% trans "No hay existencias en tiendas" %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot class="table-primary">
+                      <tr>
+                        <th>{% trans "Total Tiendas" %}</th>
+                        <th class="text-end">
+                          <span class="badge bg-dark fs-6">{{ total_tiendas }}</span>
+                        </th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Total General -->
-        <div style="margin-top: 20px; font-size: 1.2em;">
-            <strong>Total General (Bodegas + Tiendas):</strong> {{ gran_total }}
+        <div class="card mt-4 border-warning">
+          <div class="card-body bg-warning bg-opacity-10">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-calculator text-warning me-3" style="font-size: 2rem;"></i>
+                <div>
+                  <h5 class="mb-0 text-warning">{% trans "Total General" %}</h5>
+                  <small class="text-muted">{% trans "Bodegas + Tiendas" %}</small>
+                </div>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-warning text-dark fs-3 px-3 py-2">{{ gran_total }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-    {% endif %}
-</body>
-</html>
+      {% else %}
+        <!-- Estado inicial cuando no hay producto seleccionado -->
+        <div class="text-center py-5">
+          <i class="bi bi-search text-muted mb-3" style="font-size: 4rem;"></i>
+          <h5 class="text-muted">{% trans "Seleccione un producto para consultar sus existencias" %}</h5>
+          <p class="text-muted">{% trans "Use el selector de arriba para elegir un producto y ver su distribución en bodegas y tiendas" %}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

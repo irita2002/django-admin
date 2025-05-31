@@ -1,0 +1,374 @@
+<!-- templates/inventario/listar_existencias_tienda.html -->
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Existencias de {{ tienda.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .table thead {
+        background: #667eea;
+        color: white;
+    }
+    .badge-stock {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .stock-bajo { background: #fee2e2; color: #991b1b; }
+    .stock-medio { background: #fef3c7; color: #92400e; }
+    .stock-alto { background: #d1fae5; color: #065f46; }
+    .stock-agotado { background: #f3f4f6; color: #6b7280; }
+    .info-tienda {
+        background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Información de la tienda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="info-tienda">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-2">
+                            <i class="fas fa-store me-2 text-primary"></i>
+                            {{ tienda.nombre }}
+                        </h2>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1">
+                                    <strong>Tipo:</strong> 
+                                    <span class="badge bg-primary">{{ tienda.get_tipo_display }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-8">
+                                <p class="mb-1">
+                                    <strong>Ubicación:</strong> 
+                                    {{ tienda.latitud }}, {{ tienda.longitud }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="{% url 'inventario:agregar_existencias_tienda_id' tienda.id %}" 
+                           class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            Agregar Existencias
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ existencias.count }}</h3>
+                    <p class="mb-0">Productos Diferentes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">
+                        {% with total=0 %}
+                            {% for existencia in existencias %}
+                                {% if existencia.cantidad > 0 %}
+                                    {{ total|add:existencia.cantidad }}
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </h3>
+                    <p class="mb-0">Total en Stock</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">
+                        {% with bajo_stock=0 %}
+                            {% for existencia in existencias %}
+                                {% if existencia.cantidad <= 10 and existencia.cantidad > 0 %}
+                                    {{ bajo_stock|add:1 }}
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </h3>
+                    <p class="mb-0">Stock Bajo</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">
+                        {% with agotados=0 %}
+                            {% for existencia in existencias %}
+                                {% if existencia.cantidad == 0 %}
+                                    {{ agotados|add:1 }}
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </h3>
+                    <p class="mb-0">Agotados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de existencias -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-inventory me-2"></i>
+                        Existencias Detalladas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if existencias %}
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tablaExistencias">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for existencia in existencias %}
+                                    <tr class="{% if existencia.cantidad == 0 %}table-secondary{% elif existencia.cantidad <= 10 %}table-warning{% endif %}">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-box me-2 text-muted"></i>
+                                                <strong>{{ existencia.producto.nombre }}</strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="fs-4 fw-bold">{{ existencia.cantidad }}</span>
+                                        </td>
+                                        <td>
+                                            {% if existencia.cantidad == 0 %}
+                                                <span class="badge stock-agotado">
+                                                    <i class="fas fa-times me-1"></i>Agotado
+                                                </span>
+                                            {% elif existencia.cantidad <= 10 %}
+                                                <span class="badge stock-bajo">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Stock Bajo
+                                                </span>
+                                            {% elif existencia.cantidad <= 50 %}
+                                                <span class="badge stock-medio">
+                                                    <i class="fas fa-minus me-1"></i>Stock Medio
+                                                </span>
+                                            {% else %}
+                                                <span class="badge stock-alto">
+                                                    <i class="fas fa-check me-1"></i>Stock Alto
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="editarExistencia({{ existencia.id }}, '{{ existencia.producto.nombre }}', {{ existencia.cantidad }})"
+                                                        title="Editar cantidad">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-success" 
+                                                        onclick="agregarStock({{ existencia.id }}, '{{ existencia.producto.nombre }}')"
+                                                        title="Agregar stock">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">No hay existencias registradas</h4>
+                            <p class="text-muted mb-4">Esta tienda no tiene productos en stock</p>
+                            <a href="{% url 'inventario:agregar_existencias_tienda_id' tienda.id %}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>
+                                Agregar Primer Producto
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar existencias -->
+<div class="modal fade" id="modalEditarExistencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Existencia
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarExistencia" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Producto:</label>
+                        <p id="nombreProducto" class="text-muted"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nuevaCantidad" class="form-label fw-bold">Nueva Cantidad</label>
+                        <input type="number" class="form-control" id="nuevaCantidad" 
+                               name="cantidad" min="0" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Ingrese la cantidad total que desea tener en stock
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar stock -->
+<div class="modal fade" id="modalAgregarStock" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Agregar Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAgregarStock" action="{% url 'agregar_existencias_tienda' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="tienda" value="{{ tienda.id }}">
+                <input type="hidden" id="productoAgregar" name="producto" value="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Producto:</label>
+                        <p id="nombreProductoAgregar" class="text-muted"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cantidadAgregar" class="form-label fw-bold">Cantidad a Agregar</label>
+                        <input type="number" class="form-control" id="cantidadAgregar" 
+                               name="cantidad" min="1" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Esta cantidad se sumará al stock actual
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Agregar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Función para editar existencias
+function editarExistencia(existenciaId, nombreProducto, cantidadActual) {
+    document.getElementById('nombreProducto').textContent = nombreProducto;
+    document.getElementById('nuevaCantidad').value = cantidadActual;
+    document.getElementById('formEditarExistencia').action = 
+        `{% url 'inventario:actualizar_existencia_tienda' 0 %}`.replace('0', existenciaId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarExistencia'));
+    modal.show();
+}
+
+// Función para agregar stock
+function agregarStock(existenciaId, nombreProducto) {
+    // Obtener el ID del producto desde la existencia
+    const fila = event.target.closest('tr');
+    const productoId = existenciaId; // Necesitarás pasar el producto ID también
+    
+    document.getElementById('nombreProductoAgregar').textContent = nombreProducto;
+    document.getElementById('cantidadAgregar').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAgregarStock'));
+    modal.show();
+}
+
+// Inicializar DataTable si está disponible
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof $ !== 'undefined' && $.fn.DataTable) {
+        $('#tablaExistencias').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+            },
+            order: [[1, 'asc']], // Ordenar por cantidad
+            pageLength: 25,
+            responsive: true
+        });
+    }
+});
+
+// Actualizar colores de filas según el stock
+function actualizarColoresStock() {
+    const filas = document.querySelectorAll('#tablaExistencias tbody tr');
+    filas.forEach(fila => {
+        const cantidadCell = fila.cells[1];
+        const cantidad = parseInt(cantidadCell.textContent);
+        
+        // Remover clases existentes
+        fila.classList.remove('table-secondary', 'table-warning', 'table-success');
+        
+        // Aplicar nueva clase según la cantidad
+        if (cantidad === 0) {
+            fila.classList.add('table-secondary');
+        } else if (cantidad <= 10) {
+            fila.classList.add('table-warning');
+        } else if (cantidad > 50) {
+            fila.classList.add('table-success');
+        }
+    });
+}
+
+// Llamar la función al cargar la página
+document.addEventListener('DOMContentLoaded', actualizarColoresStock);
+</script>
+{% endblock %}

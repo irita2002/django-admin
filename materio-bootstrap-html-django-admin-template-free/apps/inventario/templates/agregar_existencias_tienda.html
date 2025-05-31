@@ -1,0 +1,805 @@
+<!-- templates/inventario/agregar_existencias_tienda.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agregar Existencias a Tiendas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .existencias-table {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .btn-agregar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 25px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    .btn-agregar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+    .table thead {
+        background: #667eea;
+        color: white;
+    }
+    .badge-stock {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .stock-bajo { background: #fee2e2; color: #991b1b; }
+    .stock-medio { background: #fef3c7; color: #92400e; }
+    .stock-alto { background: #d1fae5; color: #065f46; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Título principal -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-store me-2"></i>
+                        Gestión de Existencias en Tiendas
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes de alerta -->
+    {% if messages %}
+        <div class="row mb-3">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Formulario para agregar existencias -->
+        <div class="col-lg-5 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Agregar Existencias
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="formExistencias">
+                        {% csrf_token %}
+                        
+                        <div class="form-section">
+                            <div class="mb-3">
+                                <label for="tienda" class="form-label fw-bold">
+                                    <i class="fas fa-store me-1"></i>
+                                    Seleccionar Tienda
+                                </label>
+                                <select name="tienda" id="tienda" class="form-select" required>
+                                    <option value="">Seleccione una tienda</option>
+                                    {% for tienda in tiendas %}
+                                        <option value="{{ tienda.id }}" 
+                                                {% if tienda_seleccionada and tienda.id == tienda_seleccionada.id %}selected{% endif %}>
+                                            {{ tienda.nombre }} ({{ tienda.get_tipo_display }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="producto" class="form-label fw-bold">
+                                    <i class="fas fa-box me-1"></i>
+                                    Seleccionar Producto
+                                </label>
+                                <select name="producto" id="producto" class="form-select" required>
+                                    <option value="">Seleccione un producto</option>
+                                    {% for producto in productos %}
+                                        <option value="{{ producto.id }}">{{ producto.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="cantidad" class="form-label fw-bold">
+                                    <i class="fas fa-calculator me-1"></i>
+                                    Cantidad
+                                </label>
+                                <input type="number" name="cantidad" id="cantidad" 
+                                       class="form-control" min="1" step="1" required
+                                       placeholder="Ingrese la cantidad">
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-agregar">
+                                    <i class="fas fa-plus me-2"></i>
+                                    Agregar Existencias
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Información de la tienda seleccionada -->
+                    {% if tienda_seleccionada %}
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Información de la Tienda
+                        </h6>
+                        <p class="mb-1"><strong>Nombre:</strong> {{ tienda_seleccionada.nombre }}</p>
+                        <p class="mb-1"><strong>Tipo:</strong> {{ tienda_seleccionada.get_tipo_display }}</p>
+                        <p class="mb-0"><strong>Ubicación:</strong> {{ tienda_seleccionada.latitud }}, {{ tienda_seleccionada.longitud }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de existencias actuales -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-inventory me-2"></i>
+                        Existencias Actuales
+                        {% if tienda_seleccionada %}
+                            - {{ tienda_seleccionada.nombre }}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="existenciasContainer">
+                        {% if existencias_actuales %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Cantidad</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for existencia in existencias_actuales %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ existencia.producto.nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="fs-5 fw-bold">{{ existencia.cantidad }}</span>
+                                            </td>
+                                            <td>
+                                                {% if existencia.cantidad <= 10 %}
+                                                    <span class="badge stock-bajo">Stock Bajo</span>
+                                                {% elif existencia.cantidad <= 50 %}
+                                                    <span class="badge stock-medio">Stock Medio</span>
+                                                {% else %}
+                                                    <span class="badge stock-alto">Stock Alto</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="editarExistencia({{ existencia.id }}, {{ existencia.cantidad }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay existencias registradas</h5>
+                                <p class="text-muted">Seleccione una tienda y agregue productos para comenzar</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar existencias -->
+<div class="modal fade" id="modalEditarExistencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Actualizar Existencia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarExistencia" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nuevaCantidad" class="form-label">Nueva Cantidad</label>
+                        <input type="number" class="form-control" id="nuevaCantidad" 
+                               name="cantidad" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cargar existencias cuando cambie la tienda usando AJAX
+// Reemplaza la parte del JavaScript en tu template HTML donde está el evento 'change'
+
+document.getElementById('tienda').addEventListener('change', function() {
+    const tiendaId = this.value;
+    const existenciasContainer = document.getElementById('existenciasContainer');
+    
+    if (tiendaId) {
+        // Mostrar loading
+        existenciasContainer.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2">Cargando existencias...</p>
+            </div>
+        `;
+        
+        // Construir URL absoluta usando el namespace de Django
+        const url = `{% url 'inventario:obtener_existencias_tienda_ajax' 0 %}`.replace('0', tiendaId);
+        
+        // Hacer petición AJAX
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.existencias && data.existencias.length > 0) {
+                // Construir tabla con existencias
+                let tableHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.existencias.forEach(existencia => {
+                    let estadoBadge = '';
+                    let rowClass = '';
+                    
+                    if (existencia.cantidad <= 0) {
+                        estadoBadge = '<span class="badge stock-bajo">Sin Stock</span>';
+                        rowClass = 'table-danger';
+                    } else if (existencia.cantidad <= 10) {
+                        estadoBadge = '<span class="badge stock-bajo">Stock Bajo</span>';
+                        rowClass = 'table-warning';
+                    } else if (existencia.cantidad <= 50) {
+                        estadoBadge = '<span class="badge stock-medio">Stock Medio</span>';
+                    } else {
+                        estadoBadge = '<span class="badge stock-alto">Stock Alto</span>';
+                    }
+                    
+                    tableHTML += `
+                        <tr class="${rowClass}">
+                            <td><strong>${existencia.producto_nombre}</strong></td>
+                            <td><span class="fs-5 fw-bold">${existencia.cantidad}</span></td>
+                            <td>${estadoBadge}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editarExistenciaAjax(${existencia.producto_id}, '${existencia.producto_nombre}', ${existencia.cantidad})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</tbody></table></div>';
+                existenciasContainer.innerHTML = tableHTML;
+            } else {
+                // No hay existencias
+                existenciasContainer.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay existencias registradas</h5>
+                        <p class="text-muted">Agregue productos para comenzar</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            existenciasContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="text-danger">Error al cargar existencias</h5>
+                    <p class="text-muted">Error: ${error.message}</p>
+                    <p class="text-muted">Revise la consola del navegador para más detalles</p>
+                </div>
+            `;
+        });
+    } else {
+        // Limpiar contenedor si no hay tienda seleccionada
+        existenciasContainer.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Seleccione una tienda</h5>
+                <p class="text-muted">Para ver las existencias disponibles</p>
+            </div>
+        `;
+    }
+});
+
+// También actualiza la función editarExistenciaAjax para usar URL absoluta
+function editarExistenciaAjax(productoId, nombreProducto, cantidadActual) {
+    const tiendaId = document.getElementById('tienda').value;
+    
+    document.getElementById('nuevaCantidad').value = cantidadActual;
+    
+    const form = document.getElementById('formEditarExistencia');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        formData.append('tienda_id', tiendaId);
+        formData.append('producto_id', productoId);
+        
+        // URL absoluta para actualizar existencia
+        const updateUrl = '{% url "inventario:actualizar_existencia_ajax" %}';
+        
+        fetch(updateUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('modalEditarExistencia')).hide();
+                
+                // Mostrar mensaje de éxito
+                showAlert('success', data.message);
+                
+                // Recargar existencias
+                document.getElementById('tienda').dispatchEvent(new Event('change'));
+            } else {
+                showAlert('danger', data.message || 'Error al actualizar');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', `Error: ${error.message}`);
+        });
+    };
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarExistencia'));
+    modal.show();
+}
+
+// Función para editar existencias (versión AJAX)
+function editarExistenciaAjax(productoId, nombreProducto, cantidadActual) {
+    // Buscar la existencia por producto y tienda
+    const tiendaId = document.getElementById('tienda').value;
+    
+    document.getElementById('nuevaCantidad').value = cantidadActual;
+    
+    // Modificar el formulario para enviar a una URL específica
+    const form = document.getElementById('formEditarExistencia');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        formData.append('tienda_id', tiendaId);
+        formData.append('producto_id', productoId);
+        
+        fetch('/inventario/ajax/actualizar-existencia/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('modalEditarExistencia')).hide();
+                
+                // Mostrar mensaje de éxito
+                showAlert('success', data.message);
+                
+                // Recargar existencias
+                document.getElementById('tienda').dispatchEvent(new Event('change'));
+            } else {
+                showAlert('danger', data.message || 'Error al actualizar');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'Error de conexión');
+        });
+    };
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarExistencia'));
+    modal.show();
+}
+
+// Función para editar existencias (versión original para existencias pre-cargadas)
+function editarExistencia(existenciaId, cantidadActual) {
+    document.getElementById('nuevaCantidad').value = cantidadActual;
+    document.getElementById('formEditarExistencia').action = 
+        `{% url 'inventario:actualizar_existencia_tienda' 0 %}`.replace('0', existenciaId);
+    
+    // Restaurar el comportamiento original del formulario
+    document.getElementById('formEditarExistencia').onsubmit = null;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarExistencia'));
+    modal.show();
+}
+
+// Función para mostrar alertas
+// Función mejorada para mostrar alertas con auto-dismiss
+function showAlert(type, message, duration = 5000) {
+    // Buscar si ya existe un contenedor de alertas
+    let alertContainer = document.querySelector('.alert-container');
+    
+    // Si no existe, crear uno al inicio del contenedor principal
+    if (!alertContainer) {
+        const mainContainer = document.querySelector('.container-fluid');
+        alertContainer = document.createElement('div');
+        alertContainer.className = 'alert-container';
+        alertContainer.style.position = 'relative';
+        alertContainer.style.zIndex = '1050';
+        mainContainer.insertBefore(alertContainer, mainContainer.firstChild);
+    }
+    
+    // Crear el HTML de la alerta
+    const alertId = 'alert-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const alertHTML = `
+        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show mb-3" role="alert" 
+             style="animation: slideInDown 0.3s ease-out;">
+            <i class="fas ${getAlertIcon(type)} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    // Insertar la alerta
+    alertContainer.insertAdjacentHTML('beforeend', alertHTML);
+    
+    // Auto-eliminar después del tiempo especificado
+    setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+            // Agregar animación de salida
+            alert.style.animation = 'slideOutUp 0.3s ease-in';
+            setTimeout(() => {
+                if (alert && alert.parentNode) {
+                    alert.remove();
+                }
+            }, 300);
+        }
+    }, duration);
+    
+    // Hacer scroll suave hacia la alerta si no está visible
+    setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+            alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, 100);
+}
+
+// Función para obtener el icono según el tipo de alerta
+function getAlertIcon(type) {
+    const icons = {
+        'success': 'fa-check-circle',
+        'danger': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle',
+        'primary': 'fa-info-circle',
+        'secondary': 'fa-info-circle'
+    };
+    return icons[type] || 'fa-info-circle';
+}
+
+// Función para aplicar auto-dismiss a alertas existentes
+function initializeExistingAlerts() {
+    const existingAlerts = document.querySelectorAll('.alert:not([data-auto-dismiss])');
+    
+    existingAlerts.forEach(alert => {
+        // Marcar como procesada
+        alert.setAttribute('data-auto-dismiss', 'true');
+        
+        // Agregar icono si no tiene
+        if (!alert.querySelector('.fas')) {
+            const alertType = Array.from(alert.classList).find(c => c.startsWith('alert-')).replace('alert-', '');
+            const icon = document.createElement('i');
+            icon.className = `fas ${getAlertIcon(alertType)} me-2`;
+            alert.insertAdjacentElement('afterbegin', icon);
+        }
+        
+        // Configurar auto-dismiss
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                // Agregar animación de salida
+                alert.style.transition = 'all 0.3s ease-in';
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-20px)';
+                
+                setTimeout(() => {
+                    if (alert && alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
+    });
+}
+
+// Estilos CSS para animaciones (agregar al head o al CSS existente)
+function addAlertAnimations() {
+    if (!document.getElementById('alert-animations')) {
+        const style = document.createElement('style');
+        style.id = 'alert-animations';
+        style.textContent = `
+            @keyframes slideInDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            @keyframes slideOutUp {
+                from {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateY(-30px);
+                }
+            }
+            
+            .alert-container {
+                position: relative;
+                z-index: 1050;
+            }
+            
+            .alert {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                border: none;
+                border-left: 4px solid;
+            }
+            
+            .alert-success {
+                border-left-color: #10b981;
+                background-color: #ecfdf5;
+                color: #065f46;
+            }
+            
+            .alert-danger {
+                border-left-color: #ef4444;
+                background-color: #fef2f2;
+                color: #991b1b;
+            }
+            
+            .alert-warning {
+                border-left-color: #f59e0b;
+                background-color: #fffbeb;
+                color: #92400e;
+            }
+            
+            .alert-info {
+                border-left-color: #3b82f6;
+                background-color: #eff6ff;
+                color: #1e40af;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Actualizar las funciones existentes para usar la nueva función showAlert
+
+// Función para editar existencias (versión AJAX) - ACTUALIZADA
+function editarExistenciaAjax(productoId, nombreProducto, cantidadActual) {
+    const tiendaId = document.getElementById('tienda').value;
+    
+    document.getElementById('nuevaCantidad').value = cantidadActual;
+    
+    const form = document.getElementById('formEditarExistencia');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        formData.append('tienda_id', tiendaId);
+        formData.append('producto_id', productoId);
+        
+        const updateUrl = '{% url "inventario:actualizar_existencia_ajax" %}';
+        
+        fetch(updateUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('modalEditarExistencia')).hide();
+                
+                // Mostrar mensaje de éxito con auto-dismiss
+                showAlert('success', data.message || 'Existencia actualizada correctamente');
+                
+                // Recargar existencias
+                document.getElementById('tienda').dispatchEvent(new Event('change'));
+            } else {
+                showAlert('danger', data.message || 'Error al actualizar la existencia');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', `Error de conexión: ${error.message}`);
+        });
+    };
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarExistencia'));
+    modal.show();
+}
+
+// Validación del formulario principal - ACTUALIZADA
+document.getElementById('formExistencias').addEventListener('submit', function(e) {
+    const tienda = document.getElementById('tienda').value;
+    const producto = document.getElementById('producto').value;
+    const cantidad = document.getElementById('cantidad').value;
+    
+    if (!tienda || !producto || !cantidad || cantidad <= 0) {
+        e.preventDefault();
+        showAlert('warning', 'Por favor, complete todos los campos correctamente.');
+    }
+});
+
+// Inicializar todo cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar estilos de animación
+    addAlertAnimations();
+    
+    // Procesar alertas existentes
+    initializeExistingAlerts();
+    
+    // Configurar observer para nuevas alertas que puedan aparecer
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.classList && node.classList.contains('alert')) {
+                    if (!node.getAttribute('data-auto-dismiss')) {
+                        initializeExistingAlerts();
+                    }
+                }
+            });
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+});
+
+// Limpiar formulario después de envío exitoso - ACTUALIZADA
+document.getElementById('formExistencias').addEventListener('submit', function() {
+    setTimeout(() => {
+        // Verificar si hay mensaje de éxito
+        const successAlert = document.querySelector('.alert-success');
+        if (successAlert) {
+            document.getElementById('producto').value = '';
+            document.getElementById('cantidad').value = '';
+            
+            // Recargar existencias si hay tienda seleccionada
+            const tiendaSelect = document.getElementById('tienda');
+            if (tiendaSelect.value) {
+                tiendaSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    }, 100);
+});
+
+// Validación del formulario principal
+document.getElementById('formExistencias').addEventListener('submit', function(e) {
+    const tienda = document.getElementById('tienda').value;
+    const producto = document.getElementById('producto').value;
+    const cantidad = document.getElementById('cantidad').value;
+    
+    if (!tienda || !producto || !cantidad || cantidad <= 0) {
+        e.preventDefault();
+        showAlert('warning', 'Por favor, complete todos los campos correctamente.');
+    }
+});
+
+// Limpiar formulario después de envío exitoso
+document.getElementById('formExistencias').addEventListener('submit', function() {
+    // Solo limpiar si el formulario es válido
+    setTimeout(() => {
+        if (document.querySelector('.alert-success')) {
+            document.getElementById('producto').value = '';
+            document.getElementById('cantidad').value = '';
+            
+            // Recargar existencias si hay tienda seleccionada
+            const tiendaSelect = document.getElementById('tienda');
+            if (tiendaSelect.value) {
+                tiendaSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    }, 100);
+});
+</script>
+{% endblock %}
