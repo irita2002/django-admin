@@ -8,13 +8,58 @@
     <div class="col-md-6 form-floating">
       {{ form.nombre|add_class:"form-control" }}
       <label for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+      {% if form.nombre.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.nombre.errors }}
+        </div>
+      {% endif %}
     </div>
-    <!-- (Agrega aquí los demás campos que tenga tu modelo Producto) -->
-    <!-- Supongamos que Producto tiene 'cantidad' y 'descripcion' -->
 
+    <!-- Primera Necesidad (Checkbox) -->
+    <div class="col-md-6 d-flex align-items-center">
+      <div class="form-check form-switch">
+        {{ form.primera_necesidad|add_class:"form-check-input" }}
+        <label class="form-check-label" for="{{ form.primera_necesidad.id_for_label }}">
+          {{ form.primera_necesidad.label }}
+        </label>
+      </div>
+      {% if form.primera_necesidad.errors %}
+        <div class="invalid-feedback d-block ms-2">
+          {{ form.primera_necesidad.errors }}
+        </div>
+      {% endif %}
+    </div>
 
-    <!-- Si hay más campos, repítelos dentro de .form-floating -->
+    <!-- Si tienes más campos, agrégalos aquí -->
+    <!-- Ejemplo para otros campos del modelo Producto:
+    <div class="col-md-6 form-floating">
+      {{ form.descripcion|add_class:"form-control" }}
+      <label for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }}</label>
+      {% if form.descripcion.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.descripcion.errors }}
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="col-md-6 form-floating">
+      {{ form.cantidad|add_class:"form-control" }}
+      <label for="{{ form.cantidad.id_for_label }}">{{ form.cantidad.label }}</label>
+      {% if form.cantidad.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.cantidad.errors }}
+        </div>
+      {% endif %}
+    </div>
+    -->
   </div>
+
+  <!-- Mostrar errores no relacionados con campos específicos -->
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger mt-3">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
 
   <div class="mt-4 d-flex justify-content-end">
     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">

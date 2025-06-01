@@ -85,6 +85,8 @@
                 <th>{% trans "Bodega" %}</th>
                 <th>{% trans "Necesidad" %}</th>
                 <th>{% trans "Distancia (m)" %}</th>
+                <th>{% trans "Vulnerables" %}</th>
+
               </tr>
             </thead>
             <tbody>
@@ -93,6 +95,8 @@
                 <td>{{ r.bodega.nombre }}</td>
                 <td>{{ r.necesidad }}</td>
                 <td>{{ r.distancia_m }}</td>
+                <td>{{ r.vulnerables }}</td>
+
               </tr>
               {% empty %}
               <tr>

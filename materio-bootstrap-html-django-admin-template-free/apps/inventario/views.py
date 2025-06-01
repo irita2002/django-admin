@@ -246,7 +246,7 @@ from .models import Producto
 # ———————————————————————————————
 class ProductoCreateView(CreateView):
     model = Producto
-    fields = ["nombre"  ]  # Ajusta según tus campos reales
+    fields = ["nombre" ,"primera_necesidad" ]  # Ajusta según tus campos reales
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
 
@@ -282,7 +282,7 @@ class ProductoCreateView(CreateView):
 # ———————————————————————————————
 class ProductoUpdateView(UpdateView):
     model = Producto
-    fields = ["nombre"]  # Mismos campos que en CreateView
+    fields = ["nombre","primera_necesidad"]  # Mismos campos que en CreateView
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
 
@@ -721,14 +721,27 @@ import networkx as nx
 from shapely.geometry import Point
 from django.db.models import Sum
 
-def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3):
+def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
+    """
+    Recomienda bodegas para transferencia considerando:
+    - Necesidad de la bodega
+    - Distancia desde tienda origen
+    - Población vulnerable (si es producto de primera necesidad)
+    
+    Args:
+        tienda_origen: ID de la tienda origen
+        producto: Instancia del producto
+        alfa: Peso para necesidad (default 0.7)
+        beta: Peso para distancia (default 0.3) 
+        gamma: Peso para vulnerables cuando es primera necesidad (default 0.5)
+    """
     # 1. Obtener ubicación de tienda
     tienda = Tienda.objects.get(id=tienda_origen)
-
     
     lat0 = float(tienda.latitud)
     lon0 = float(tienda.longitud)
     print(str(lat0)+"+"+ str(lon0))
+    
     # 2. Descargar grafo vial y proyectar
     G = ox.graph_from_point((lat0, lon0), dist=3000, network_type='drive')
     G_proj = ox.project_graph(G)
@@ -736,15 +749,17 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3):
     geom0, _ = ox.projection.project_geometry(Point(lon0, lat0), to_crs=G_proj.graph['crs'])
     nodo_origen = ox.distance.nearest_nodes(G_proj, geom0.x, geom0.y)
 
-    # 3. Calcular necesidad y distancia por bodega
+    # 3. Calcular necesidad, distancia y vulnerables por bodega
     from apps.inventario.models import Bodega, TransferenciaHistorial
-    bodegas = Bodega.objects.all()
+    bodegas = Bodega.objects.select_related('cp').all()
 
     resultados = []
 
     max_necesidad = 0
     max_distancia = 1  # evitar división por cero
+    max_vulnerables = 1  # evitar división por cero
 
+    # Primera pasada: calcular valores y encontrar máximos
     for bodega in bodegas:
         lat_b = bodega.latitud
         lon_b = bodega.longitud
@@ -760,40 +775,69 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3):
         ).aggregate(total=Sum('cantidad'))['total'] or 0
 
         necesidad = max(bodega.cantidad_nucleos - entregado, 0)
+        
+        # Obtener población vulnerable de la circunscripción
+        vulnerables = bodega.cp.total_vulnerables if bodega.cp else 0
 
         max_necesidad = max(max_necesidad, necesidad)
         max_distancia = max(max_distancia, distancia)
+        max_vulnerables = max(max_vulnerables, vulnerables)
 
         resultados.append({
             'bodega': bodega,
             'necesidad': necesidad,
             'distancia': distancia,
-            'latitud':lat_b,
-            'longitud':lon_b
+            'vulnerables': vulnerables,
+            'latitud': lat_b,
+            'longitud': lon_b
         })
-
+    print("resultados")
     # 4. Normalizar y calcular score
     recomendaciones = []
+    es_primera_necesidad = producto.primera_necesidad
+    
     for r in resultados:
         necesidad_n = r['necesidad'] / max_necesidad if max_necesidad else 0
         distancia_n = r['distancia'] / max_distancia if max_distancia else 0
-        score = alfa * necesidad_n - beta * distancia_n
+        vulnerables_n = r['vulnerables'] / max_vulnerables if max_vulnerables else 0
+        
+        if es_primera_necesidad:
+            # Para productos de primera necesidad, ajustar pesos para priorizar vulnerables
+            # Reducir alfa y beta para dar espacio a gamma
+            alfa_adj = alfa * 0.6  # Reducir peso de necesidad
+            beta_adj = beta * 0.6  # Reducir peso de distancia
+            score = alfa_adj * necesidad_n - beta_adj * distancia_n + gamma * vulnerables_n
+        else:
+            # Para productos normales, usar la fórmula original
+            score = alfa * necesidad_n - beta * distancia_n
+        
         recomendaciones.append({
             'bodega': r['bodega'],
             'necesidad': r['necesidad'],
             'distancia_m': round(r['distancia']),
+            'vulnerables': r['vulnerables'],
             'score': round(score, 4),
-            'latitud':r['latitud'],
-            'longitud':r['longitud'],
+            'es_primera_necesidad': es_primera_necesidad,
+            'latitud': r['latitud'],
+            'longitud': r['longitud'],
         })
 
     recomendaciones = sorted(recomendaciones, key=lambda x: x['score'], reverse=True)
+    
+    # Información adicional para debug
+    if es_primera_necesidad:
+        print(f"Producto de PRIMERA NECESIDAD: {producto.nombre}")
+        print("Priorizando bodegas con mayor población vulnerable")
+    else:
+        print(f"Producto regular: {producto.nombre}")
+    
     print(recomendaciones)
     
     return recomendaciones
 
 from django.shortcuts import render, get_object_or_404
-from .models import Tienda
+from django.contrib import messages
+from .models import Tienda, Bodega, Producto
 from .utils.map_generator import generar_mapa_offline
 
 def ver_tiendas(request, tienda_id=None):
@@ -807,28 +851,46 @@ def ver_tiendas(request, tienda_id=None):
     if tienda_id:
         # si hay una tienda seleccionada, úsala como origen
         tienda_origen = get_object_or_404(Tienda, pk=tienda_id)
-        # pasamos **solo** esa tienda (o bien la lista completa si quieres mostrar distancias al resto)
+        
+        # Generar mapa con la tienda como origen
         mapa_html = generar_mapa_offline(
             ubicaciones=bodegas,
             direccion_origen=f"{tienda_origen.latitud},{tienda_origen.longitud}"
         )
-        
-        # Solo obtener recomendaciones si hay tienda seleccionada
+        print(f"GET parameters: {dict(request.GET)}")
+        # Obtener producto seleccionado si existe
         if 'producto_id' in request.GET:
-            producto_id = request.GET['producto_id']
-            producto_seleccionado = Producto.objects.get(id=producto_id)
-            print(producto_seleccionado)
-        
-        # AQUÍ ESTÁ LA CORRECCIÓN: Solo llamar recomendar_bodega si hay tienda
-        recomendaciones = recomendar_bodega(tienda_id, producto_seleccionado)
-        
+            try:
+                producto_id = request.GET['producto_id']
+                if producto_id:  # Verificar que no esté vacío
+                    producto_seleccionado = get_object_or_404(Producto, id=producto_id)
+                    print(f"Producto seleccionado: {producto_seleccionado}")
+                    
+                    # Solo llamar recomendar_bodega si hay tienda Y producto
+                    try:
+                        recomendaciones = recomendar_bodega(tienda_id, producto_seleccionado)
+                        print(f"Recomendaciones generadas: {len(recomendaciones)}")
+                        
+                        # Agregar información adicional para el template
+                        for rec in recomendaciones:
+                            rec['distancia_km'] = round(rec['distancia_m'] / 1000, 2)
+                            
+                    except Exception as e:
+                        messages.error(request, f'Error al generar recomendaciones: {str(e)}')
+                        print(f"Error en recomendar_bodega: {e}")
+                        recomendaciones = []
+                        
+            except (ValueError, Producto.DoesNotExist) as e:
+                messages.error(request, 'Producto no válido seleccionado')
+                print(f"Error con producto: {e}")
+                producto_seleccionado = None
+                
     else:
         # sin tienda seleccionada, mapa centrado en coordenadas por defecto
         mapa_html = generar_mapa_offline(ubicaciones=bodegas)
         # NO llamamos recomendar_bodega cuando no hay tienda seleccionada
-
-    
-    return render(request, 'map.html', {
+    print(recomendaciones)
+    context = {
         'Bodega': bodegas,
         'tiendas': tiendas,
         'mapa': mapa_html,
@@ -836,7 +898,12 @@ def ver_tiendas(request, tienda_id=None):
         'producto_seleccionado': producto_seleccionado,
         'recomendaciones': recomendaciones,
         'productos': productos,
-    })
+        # Información adicional para el template
+        'tiene_recomendaciones': len(recomendaciones) > 0,
+        'es_primera_necesidad': producto_seleccionado.primera_necesidad if producto_seleccionado else False,
+    }
+    
+    return render(request, 'map.html', context)
 
 ########################################Existencia en tiendas ###################################################
 # apps/inventario/views.py
