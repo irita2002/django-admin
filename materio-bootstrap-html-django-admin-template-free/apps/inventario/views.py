@@ -778,7 +778,6 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3):
         necesidad_n = r['necesidad'] / max_necesidad if max_necesidad else 0
         distancia_n = r['distancia'] / max_distancia if max_distancia else 0
         score = alfa * necesidad_n - beta * distancia_n
-
         recomendaciones.append({
             'bodega': r['bodega'],
             'necesidad': r['necesidad'],
@@ -789,6 +788,8 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3):
         })
 
     recomendaciones = sorted(recomendaciones, key=lambda x: x['score'], reverse=True)
+    print(recomendaciones)
+    
     return recomendaciones
 
 from django.shortcuts import render, get_object_or_404
