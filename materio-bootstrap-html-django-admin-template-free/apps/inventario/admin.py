@@ -10,7 +10,19 @@ class ProductoAdmin(admin.ModelAdmin):
 class TiendaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'longitud', 'latitud')
     search_fields = ('nombre', 'longitud', 'latitud')
-
+    
+@admin.register(AuditoriaAcciones)
+class AuditoriaAcciones(admin.ModelAdmin):
+    list_display = ('usuario', 'accion', 'modelo')
+    search_fields = ('usuario', 'accion', 'modelo')
+    def get_model_perms(self, request):
+        return {
+            'add': self.has_add_permission(request),
+            'change': self.has_change_permission(request),
+            'delete': self.has_delete_permission(request),
+            'view': self.has_view_permission(request),
+            'display_name': 'Auditorías'  # Nombre personalizado
+        }
 @admin.register(ProductosVendido)
 class ProductosVendidoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'cantidad', 'tienda', 'fecha_venta')

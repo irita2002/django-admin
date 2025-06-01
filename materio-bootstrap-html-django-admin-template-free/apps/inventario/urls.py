@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import existencias_combinadas
+from .views import existencias_combinadas, formulario_informe_ventas, informe_ventas_pdf, informe_ventas_pdf_form
 from . import views
 app_name = "inventario"
 urlpatterns = [
@@ -45,4 +45,7 @@ urlpatterns = [
     path('mapa/tiendas/', views.ver_tiendas, name='ver_tiendas'),
     # ruta para recargar mapa con tienda seleccionada
     path('mapa/tiendas/<int:tienda_id>/', views.ver_tiendas, name='ver_tiendas'),
+    path('informe-formulario/', formulario_informe_ventas, name='formulario_informe'),
+    path('informe-generar/', informe_ventas_pdf_form, name='informe_ventas_pdf_form'),
+    path('informe-ventas/<int:producto_id>/<str:fecha_str>/', informe_ventas_pdf, name='informe_ventas_pdf'),
 ]

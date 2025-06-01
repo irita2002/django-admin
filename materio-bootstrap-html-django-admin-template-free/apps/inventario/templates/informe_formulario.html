@@ -1,0 +1,71 @@
+<!-- templates/informe_formulario.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generar Informe de Ventas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    form {
+      margin-top: 30px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      margin-top: 25px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+  <h1>Informe de Ventas</h1>
+  <form method="get" action="{% url 'inventario:informe_ventas_pdf_form' %}">
+    <label for="producto">Selecciona el producto:</label>
+    <select name="producto" id="producto" required>
+      <option value="">-- Elige un producto --</option>
+      {% for producto in productos %}
+        <option value="{{ producto.id }}">{{ producto.nombre }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="fecha">Fecha del informe:</label>
+    <input type="date" name="fecha" id="fecha" required>
+
+    <button type="submit">Generar PDF</button>
+  </form>
+</body>
+</html>

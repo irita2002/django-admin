@@ -8,7 +8,9 @@ from .forms import TransferenciaForm
 from django.db import transaction
 from web_project.template_helpers.theme import TemplateHelper
 from .utils.map_generator import generar_mapa_offline
+from .audit_decorators import *
 
+@auditar_accion('VIEW', 'Producto', 'Comprobo existencias')
 def existencias_combinadas(request):
     productos = Producto.objects.all()
     producto_seleccionado = None
@@ -64,6 +66,7 @@ from .forms import TransferenciaForm
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 # @login_required
+@auditar_accion('TRANSFER', 'Producto', 'Transfirio existencias')
 def transferir_producto(request):
     if request.method == 'POST':
         form = TransferenciaForm(request.POST)
@@ -112,7 +115,8 @@ def transferir_producto(request):
                         bodega=bodega,
                         cantidad=cantidad,
                         iteracion=iteracion,
-                        fecha_transferencia=fecha_transferencia
+                        fecha_transferencia=fecha_transferencia,
+                        tienda_destino=tienda
                     )
 
                 messages.success(request, f'Transferencia a {bodega.nombre} registrada en Iteración {numero_iteracion}')
@@ -131,9 +135,11 @@ from django.shortcuts import render
 from .models import Producto, Iteracion
 from django.template.defaulttags import register
 # @register.filter
+@auditar_accion('VIEW', 'Producto', 'Vio existencias')
 def get_item(dictionary, key):
     return dictionary.get(key, False)
 
+@auditar_accion('VIEW', 'Producto', 'Vio existencias')
 def iteraciones_por_producto(request):
     producto_seleccionado = None
     iteracion_id=0
@@ -174,7 +180,8 @@ def iteraciones_por_producto(request):
         'layout_path': TemplateHelper.set_layout("layout_blank.html"),
         
     })
-
+    
+@auditar_accion('VIEW', 'Bodega', 'Vio bodegas')
 def detalle_bodega_iteracion(request, bodega_id):
     bodega = Bodega.objects.get(id=bodega_id)
     iteraciones = TransferenciaHistorial.objects.filter(
@@ -195,7 +202,8 @@ def detalle_bodega_iteracion(request, bodega_id):
         'layout_path': TemplateHelper.set_layout("layout_blank.html"),
 
     })
-
+    
+@auditar_accion('VIEW', 'Bodega', 'Vio mapa')
 def mapa_principal(request):
     tiendas = Tienda.objects.all()
     bodegas = Bodega.objects.all()
@@ -257,14 +265,14 @@ class ProductoCreateView(CreateView):
             html = render_to_string(self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
-
+    @auditar_accion('CREATE', 'Producto', 'Creo producto')
     def form_valid(self, form):
         # Si viene AJAX y es válido, devolvemos { success: True }
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True})
         return response
-
+    @auditar_accion('VIEW', 'Producto', 'Vio producto')
     def get(self, request, *args, **kwargs):
         # Si es AJAX, enviamos solo el fragmento de formulario (vacío)
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -292,13 +300,13 @@ class ProductoUpdateView(UpdateView):
             html = render_to_string(self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
-
+    @auditar_accion('UPDATE', 'Producto', 'Actualizo producto')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True})
         return response
-
+    @auditar_accion('VIEW', 'Producto', 'Vio producto')
     def get(self, request, *args, **kwargs):
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             self.object = self.get_object()
@@ -330,7 +338,8 @@ class ProductoDeleteView(DeleteView):
             )
             return JsonResponse({"success": True, "html": html})
         return super().get(request, *args, **kwargs)
-
+    
+    @auditar_accion('DELETE', 'Producto', 'Borro producto')
     def post(self, request, *args, **kwargs):
         # Aquí hacemos la lógica de borrado en POST y devolvemos JSON
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -381,7 +390,8 @@ class TiendaCreateView(CreateView):
             html = render_to_string(self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
-
+    
+    @auditar_accion('CREATE', 'Tienda', 'Creo Tienda')
     def form_valid(self, form):
         # Guardamos la nueva Tienda
         response = super().form_valid(form)
@@ -415,7 +425,8 @@ class TiendaUpdateView(UpdateView):
             html = render_to_string(self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
-
+    
+    @auditar_accion('UPDATE', 'Tienda', 'Actualizo Tienda')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -462,7 +473,8 @@ class TiendaDeleteView(DeleteView):
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, se comporta como siempre:
         return super().get(request, *args, **kwargs)
-
+    
+    @auditar_accion('DELETE', 'Tienda', 'Borrar Tienda')
     def post(self, request, *args, **kwargs):
         """
         Aquí movemos la lógica de borrado:
@@ -508,7 +520,8 @@ class BodegaCreateView(CreateView):
             html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
-
+    
+    @auditar_accion('CREATE', 'Bodega', 'Creo una  Bodega')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -534,7 +547,7 @@ class BodegaUpdateView(UpdateView):
             html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
-
+    @auditar_accion('UPDATE', 'Bodega', 'Actualizo una  Bodega')
     def form_valid(self, form):
         # guardamos y devolvemos señal de éxito
         response = super().form_valid(form)
@@ -583,7 +596,7 @@ class BodegaDeleteView(DeleteView):
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, se comporta como DeleteView normal:
         return super().get(request, *args, **kwargs)
-
+    @auditar_accion('DELETE', 'Bodega', 'Borro una  Bodega')
     def post(self, request, *args, **kwargs):
         """
         Si la petición es AJAX (submit desde el modal), borramos y devolvemos JSON.
@@ -629,6 +642,7 @@ class CircunscripcionCreateView(CreateView):
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
 
+    @auditar_accion('CREATE', 'Circunscripcion', 'Creo una Circunscripcion')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -656,6 +670,7 @@ class CircunscripcionUpdateView(UpdateView):
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
 
+    @auditar_accion('UPDATE', 'Circunscripcion', 'Actualizo una Circunscripcion')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -700,6 +715,7 @@ class CircunscripcionDeleteView(DeleteView):
         # Si no es AJAX, usamos el flujo normal de DeleteView (muestra pagina completa)
         return super().get(request, *args, **kwargs)
 
+    @auditar_accion('DELETE', 'Circunscripcion', 'Borro una Circunscripcion')
     def post(self, request, *args, **kwargs):
         """
         Si la petición es AJAX (confirmación dentro del modal), borramos y devolvemos JSON.
@@ -791,7 +807,6 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
             'latitud': lat_b,
             'longitud': lon_b
         })
-    print("resultados")
     # 4. Normalizar y calcular score
     recomendaciones = []
     es_primera_necesidad = producto.primera_necesidad
@@ -914,7 +929,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import Tienda, Producto, ExistenciasTienda
 from .forms import ExistenciasTiendaForm
-
+@auditar_accion('CREATE', 'ExistenciasTienda', 'Actualizo ExistenciasTienda')
 def agregar_existencias_tienda(request, tienda_id=None):
     """Vista para agregar o actualizar existencias de productos en una tienda"""
     tienda = None
@@ -970,6 +985,7 @@ def agregar_existencias_tienda(request, tienda_id=None):
     
     return render(request, 'agregar_existencias_tienda.html', context)
 
+@auditar_accion('VIEW', 'ExistenciasTienda', 'Ver ExistenciasTienda')
 def listar_existencias_tienda(request, tienda_id):
     """Vista para listar todas las existencias de una tienda específica"""
     tienda = get_object_or_404(Tienda, id=tienda_id)
@@ -1052,3 +1068,118 @@ def actualizar_existencia_tienda(request, existencia_id):
             messages.error(request, f'Error al actualizar: {str(e)}')
     
     return redirect('inventario:listar_existencias_tienda', tienda_id=existencia.tienda.id)
+import datetime
+from io import BytesIO
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.template.loader import get_template
+from django.utils import timezone
+from xhtml2pdf import pisa
+
+from .models import Producto, TransferenciaHistorial
+from django.db.models import Sum
+
+def generar_pdf_desde_html(html_content):
+    """
+    Dado un string de HTML, lo convierte a PDF usando xhtml2pdf (pisa)
+    y devuelve un HttpResponse con el PDF.
+    """
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html_content.encode('utf-8')), result)
+    if pdf.err:
+        return None
+    return result.getvalue()
+
+def informe_ventas_pdf(request, producto_id, fecha_str=None):
+    """
+    Vista que genera un informe de ventas (transferencias) de un producto
+    en una fecha dada y devuelve un PDF.
+    - parametro producto_id: ID del producto a consultar
+    - parametro fecha_str (opcional): cadena "YYYY-MM-DD". Si no se da, se usa hoy.
+    """
+    # 1. Definir la fecha del reporte:
+    if fecha_str:
+        try:
+            fecha_reporte = datetime.datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except ValueError:
+            return HttpResponse("Formato de fecha inválido. Usa YYYY-MM-DD.", status=400)
+    else:
+        # Si no se pasa fecha, usar hoy
+        fecha_reporte = timezone.now().date()
+
+    # 2. Obtener el objeto Producto o devolver 404 si no existe
+    try:
+        producto = Producto.objects.get(id=producto_id)
+    except Producto.DoesNotExist:
+        return HttpResponse(f"Producto {producto_id} no encontrado", status=404)
+
+    # 3. Filtrar las transferencias del producto en esa fecha (ignoro hora)
+    transferencias = (
+        TransferenciaHistorial.objects
+        .filter(producto=producto, fecha_transferencia__date=fecha_reporte)
+        .select_related('bodega__cp', 'tienda_destino')
+    )
+
+    # 4. Preparar la lista de 'datos' para la plantilla
+    datos_informe = []
+    for transferencia in transferencias:
+        datos_informe.append({
+            'circunscripcion': transferencia.bodega.cp.nombre if transferencia.bodega and transferencia.bodega.cp else "",
+            'bodega': transferencia.bodega.nombre if transferencia.bodega else "",
+            'clientes': transferencia.cantidad or 0,
+            'producto': producto.nombre,
+            'tienda': transferencia.tienda_destino.nombre if transferencia.tienda_destino else "",
+            'cadena': transferencia.tienda_destino.tipo if transferencia.tienda_destino else ""
+        })
+
+    # Agregar 12 filas vacías como en tu ejemplo
+    filas_vacias = [{} for _ in range(12)]
+    datos_informe.extend(filas_vacias)
+
+    # 5. Calcular total de cantidades
+    total_cantidad = transferencias.aggregate(total=Sum('cantidad'))['total'] or 0
+
+    # 6. Preparar el contexto para la plantilla
+    contexto = {
+        'titulo': f"VENTA {producto.nombre} {fecha_reporte.strftime('%A %d de %B %Y').upper()}",
+        # Por ejemplo, la fecha de distribución es el día anterior
+        'fecha_distribucion': (fecha_reporte - datetime.timedelta(days=1)).strftime('%d de %B %Y'),
+        'datos': datos_informe,
+        'total_cantidad': total_cantidad,
+        'fecha_generacion': timezone.now().strftime('%d/%m/%Y %H:%M'),
+    }
+
+    # 7. Renderizar la plantilla a HTML
+    template = get_template('informe_ventas.html')
+    html_content = template.render(contexto)
+
+    # 8. Convertir HTML a PDF
+    pdf_bytes = generar_pdf_desde_html(html_content)
+    if pdf_bytes is None:
+        return HttpResponse("Error al generar el PDF", status=500)
+
+    # 9. Devolver el PDF en un HttpResponse
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    filename = f"informe_ventas_{producto.nombre}_{fecha_reporte}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+def formulario_informe_ventas(request):
+    """
+    Muestra el formulario para seleccionar producto y fecha
+    y redirige a la vista que genera el PDF.
+    """
+    productos = Producto.objects.all()
+    return render(request, 'informe_formulario.html', {'productos': productos})
+def informe_ventas_pdf_form(request):
+    """
+    Recibe parámetros GET (?producto=ID&fecha=YYYY-MM-DD) y llama
+    a la vista de generación de informe.
+    """
+    producto_id = request.GET.get('producto')
+    fecha_str = request.GET.get('fecha')
+
+    if not producto_id or not fecha_str:
+        return HttpResponse("Parámetros incompletos", status=400)
+
+    # Redirige a la vista ya existente con esos parámetros
+    return informe_ventas_pdf(request, producto_id=producto_id, fecha_str=fecha_str)

@@ -100,6 +100,8 @@ class TransferenciaHistorial(models.Model):
     cantidad = models.IntegerField()
     fecha_transferencia = models.DateTimeField()
     iteracion = models.ForeignKey(Iteracion, on_delete=models.CASCADE)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    tienda_destino = models.ForeignKey(Tienda, on_delete=models.CASCADE,default=False)
 
     class Meta:
         ordering = ['-fecha_transferencia']
@@ -111,3 +113,40 @@ class TransferenciaHistorial(models.Model):
         
 from django.db import models
 
+# models.py - Agregar al final del archivo
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+class AuditoriaAcciones(models.Model):
+    TIPOS_ACCION = [
+        ('CREATE', 'Crear'),
+        ('UPDATE', 'Actualizar'),
+        ('DELETE', 'Eliminar'),
+        ('VIEW', 'Ver'),
+        ('TRANSFER', 'Transferir'),
+        ('LOGIN', 'Iniciar Sesión'),
+        ('LOGOUT', 'Cerrar Sesión'),
+        ('SEARCH', 'Buscar'),
+        ('EXPORT', 'Exportar'),
+        ('IMPORT', 'Importar'),
+    ]
+    
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    accion = models.CharField(max_length=20, choices=TIPOS_ACCION)
+    modelo = models.CharField(max_length=100, help_text="Nombre del modelo afectado")
+    objeto_id = models.CharField(max_length=100, null=True, blank=True, help_text="ID del objeto afectado")
+    objeto_nombre = models.CharField(max_length=200, null=True, blank=True, help_text="Nombre/descripción del objeto")
+    descripcion = models.TextField(help_text="Descripción detallada de la acción")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    fecha_hora = models.DateTimeField(default=timezone.now)
+    datos_adicionales = models.JSONField(null=True, blank=True, help_text="Datos adicionales en formato JSON")
+    
+    class Meta:
+        ordering = ['-fecha_hora']
+        verbose_name = "Auditoría de Acción"
+        verbose_name_plural = "Auditoría"
+    
+    def __str__(self):
+        usuario_str = self.usuario.username if self.usuario else "Usuario Anónimo"
+        return f"{usuario_str} - {self.get_accion_display()} - {self.modelo} - {self.fecha_hora.strftime('%Y-%m-%d %H:%M')}"

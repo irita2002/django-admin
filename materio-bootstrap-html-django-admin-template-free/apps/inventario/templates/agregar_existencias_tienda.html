@@ -51,6 +51,22 @@
     .stock-bajo { background: #fee2e2; color: #991b1b; }
     .stock-medio { background: #fef3c7; color: #92400e; }
     .stock-alto { background: #d1fae5; color: #065f46; }
+        /* Aplicar degradado de #B0E0E6 hacia blanco */
+    body {
+          background: linear-gradient(135deg, #B0E0E6 0%, #ffffff 100%) !important;
+          background-attachment: fixed !important;
+          min-height: 100vh !important;
+        }
+        
+        /* Asegurar que el main container también tenga el degradado */
+    main.container {
+          background: linear-gradient(135deg, #B0E0E6 0%, #ffffff 100%) !important;
+          background-attachment: fixed !important;
+          max-width: 100% !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+          min-height: 100vh !important;
+        }
 </style>
 {% endblock %}
 
