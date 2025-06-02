@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "apps.tables",
     "apps.inventario",
     'widget_tweaks',
+    
 ]
 
 MIDDLEWARE = [

@@ -1,6 +1,6 @@
-<!DOCTYPE html>
 {% load permissions %}
 
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -48,23 +48,34 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:mapa_principal' %}">Mapa Principal</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:existencias_combinadas' %}">Existencias Totales</a></li>
       {% if user|has_group:"Coordinador" %}
+
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:agregar_existencias_tienda' %}">Actualizar Existencias Tiendas</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:transferir_producto' %}">Transferir Producto</a></li>
       {% endif %}
+
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:iteraciones_producto' %}">Iteraciones x Producto</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:list' %}">Productos</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:tienda_list' %}">Tiendas</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:bodega_list' %}">Bodegas</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:circunscripcion_list' %}">Circunscripciones</a></li>
+
+          
+
+        </ul>
+        <ul class="navbar-nav">
           <li class="nav-item">
             <form method="post" action="{% url 'logout' %}">
               {% csrf_token %}
-              <button type="submit" class="btn btn-outline-danger nav-link">
-                Desloguear
+              <button 
+                type="submit" 
+                class="btn btn-link nav-link p-0"
+                title="Cerrar sesión"
+              >
+                <i class="bi bi-box-arrow-right fs-5"></i>
+                <span class="visually-hidden">Salir</span>
               </button>
             </form>
           </li>
-
         </ul>
 
       </div>

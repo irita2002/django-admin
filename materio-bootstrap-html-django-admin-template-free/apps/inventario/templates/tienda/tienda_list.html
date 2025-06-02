@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load permissions %}
 
 {% block title %}Listado de Tiendas{% endblock %}
 
@@ -27,6 +28,8 @@
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0"><i class="bi bi-shop-window me-2"></i>{% trans "Tiendas" %}</h5>
       <!-- Botón AJAX para crear Tienda -->
+      {% if user|has_group:"Coordinador" %}
+
       <button
         type="button"
         class="btn btn-success new-tienda-btn"
@@ -34,6 +37,8 @@
         data-title="{% trans 'Nueva Tienda' %}">
         <i class="bi bi-plus-lg"></i> {% trans "Nueva Tienda" %}
       </button>
+      {% endif %}
+
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -67,6 +72,8 @@
               </td>
               <td class="text-center">
                 <!-- Botón "Editar" igual que antes -->
+              {% if user|has_group:"Coordinador" %}
+
                 <button
                   class="btn btn-sm btn-outline-primary me-1 edit-btn"
                   data-url="{% url 'inventario:tienda_update' t.pk %}"
@@ -82,6 +89,8 @@
                   title="{% trans 'Eliminar' %}">
                   <i class="bi bi-trash"></i>
                 </button>
+      {% endif %}
+
               </td>
             </tr>
             {% empty %}

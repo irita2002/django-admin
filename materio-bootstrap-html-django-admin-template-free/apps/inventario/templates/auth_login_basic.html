@@ -1,0 +1,54 @@
+{% extends layout_path %}{% load static %}{% load i18n %} {% block title %}Login - Pages{% endblock %} {% block page_css %}
+<link rel="stylesheet" href="{% static  'vendor/css/pages/page-auth.css' %}" />
+{% endblock page_css %} {% block content %}
+<div class="position-relative">
+  <div class="authentication-wrapper authentication-basic container-p-y">
+    <div class="authentication-inner py-6 mx-4">
+      <!-- Login -->
+      <div class="card p-7">
+        <!-- Logo -->
+        <div class="app-brand justify-content-center mt-5">
+          <a href="{% url 'index' %}" class="app-brand-link gap-3">
+            <span class="app-brand-logo demo">{% include 'partials/logo.html' with bgcolor="#9055FD" %}</span>
+            <span class="app-brand-text demo text-heading fw-semibold">{% get_theme_variables 'template_name' %}</span>
+          </a>
+        </div>
+        <!-- /Logo -->
+
+        <div class="card-body mt-1">
+          <h4 class="mb-1">Welcome to {% get_theme_variables 'template_name' %}! 👋🏻</h4>
+          <p class="mb-5">Please sign-in to your account and start the adventure</p>
+
+          <form id="formAuthentication" class="needs-validation" method="post">
+            {% csrf_token %}
+            {{form.as_p}}
+            <input type="submit" value="Login" />
+
+          <p class="text-center mb-5">
+            <span>New on our platform?</span>
+              <span>Create an account</span>
+            </a>
+          </p>
+        </div>
+      </div>
+      <!-- /Login -->
+      <img
+        src="{% static 'img/illustrations/tree-3.png' %}"
+        alt="auth-tree"
+        class="authentication-image-object-left d-none d-lg-block"
+      />
+      <img
+        src="{% static 'img/illustrations/auth-basic-mask-light.png' %}"
+        height="172"
+        class="authentication-image d-none d-lg-block"
+        alt="triangle-bg"
+      />
+      <img
+        src="{% static 'img/illustrations/tree.png' %}"
+        alt="auth-tree"
+        class="authentication-image-object-right d-none d-lg-block"
+      />
+    </div>
+  </div>
+</div>
+{% endblock content %}

@@ -3,7 +3,7 @@ from .views import existencias_combinadas, formulario_informe_ventas, informe_ve
 from . import views
 app_name = "inventario"
 urlpatterns = [
-
+    
     path('existencias-totales/', existencias_combinadas, name='existencias_combinadas'),
     path('transferencias/', views.transferir_producto, name='transferir_producto'),
     path('bodegas/<int:bodega_id>/', views.detalle_bodega_iteracion, name='detalle_bodega'),

@@ -1,6 +1,7 @@
 {# templates/product/product_list.html #}
 {% extends "base.html" %}
 {% load i18n %}
+{% load permissions %}
 
 {% block title %}Listado de Productos{% endblock %}
 
@@ -28,6 +29,8 @@
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{% trans "Productos" %}</h5>
       <!-- Botón AJAX para "Nuevo Producto" -->
+      {% if user|has_group:"Coordinador" %}
+
       <button
         type="button"
         class="btn btn-light btn-sm new-product-btn"
@@ -35,6 +38,8 @@
         data-title="{% trans 'Nuevo Producto' %}">
         <i class="bi bi-plus-lg text-success"></i> {% trans "Nuevo Producto" %}
       </button>
+      {% endif %}
+
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -60,6 +65,8 @@
               <td class="text-end">{{ prod.total|default:0 }}</td>
               <td class="text-center">
                 <!-- Botón Editar (AJAX) -->
+               {% if user|has_group:"Coordinador" %}
+
                 <button
                   class="btn btn-sm btn-outline-primary me-1 edit-product-btn"
                   data-url="{% url 'inventario:update' prod.pk %}"
@@ -75,6 +82,8 @@
                   title="{% trans 'Eliminar' %}">
                   <i class="bi bi-trash"></i>
                 </button>
+      {% endif %}
+
               </td>
             </tr>
             {% empty %}
