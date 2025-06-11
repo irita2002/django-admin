@@ -1,5 +1,41 @@
+import datetime
+from django.shortcuts import render, get_object_or_404
+from .models import Producto, TransferenciaHistorial
+from xhtml2pdf import pisa
+from django.template.loader import get_template
+from django.http import HttpResponse
+from io import BytesIO
+from .forms import ExistenciasTiendaForm
+from .models import Tienda, Producto, ExistenciasTienda
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Tienda, Bodega, Producto
+from shapely.geometry import Point
+import networkx as nx
+import osmnx as ox
+from .models import Circunscripcion
+from .models import Bodega
+from django.views.generic import DeleteView
+from django.http import Http404, JsonResponse
+from .models import Tienda
+from django.views.generic import (
+    ListView, DetailView, CreateView, UpdateView, DeleteView
+)
+from django.template.loader import render_to_string
+from django.http import JsonResponse, Http404
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from .models import Producto
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.template.defaulttags import register
+from .models import Producto, Iteracion
+from django.utils import timezone
+from .models import ExistenciasTienda, ExistenciasBodegas, TransferenciaHistorial, Iteracion
+from gettext import translation
 from django.shortcuts import render, redirect
-from .models import Producto,ExistenciasBodegas, ExistenciasTienda,Bodega,Tienda
+from .models import Producto, ExistenciasBodegas, ExistenciasTienda, Bodega, Tienda
 from django.views.generic import TemplateView
 from web_project import TemplateLayout
 from django.db.models import Sum
@@ -15,7 +51,6 @@ from django.views.generic.edit import FormView
 from django.shortcuts import render
 from .forms import LoginForm
 from web_project.template_helpers.theme import TemplateHelper
-
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
@@ -29,29 +64,33 @@ def sign_in(request):
         if request.user.is_authenticated:
             return redirect('/')
         form = LoginForm()
-        return render(request,'auth_login_basic.html', {'form': form,})
-    
+        return render(request, 'auth_login_basic.html', {'form': form, })
+
     elif request.method == 'POST':
         form = LoginForm(request.POST)
-        
+
         if form.is_valid():
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
-            user = authenticate(request,username=username,password=password)
+            user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
-                messages.success(request,f'Hi {username.title()}, Bienvenido otra vez!')
+                messages.success(
+                    request, f'Hi {username.title()}, Bienvenido otra vez!')
                 return redirect('/')
-        
+
         # form is not valid or user is not authenticated
-        messages.error(request,f'Contaseña o usuario incorrecto')
-        return render(request,'auth_login_basic.html',{'form': form,})
+        messages.error(request, f'Contaseña o usuario incorrecto')
+        return render(request, 'auth_login_basic.html', {'form': form, })
+
 
 def sign_out(request):
     logout(request)
-    messages.success(request,f'Estas deslogueado.')
-    return redirect('login')   
-@login_required    
+    messages.success(request, f'Estas deslogueado.')
+    return redirect('login')
+
+
+@login_required
 @auditar_accion('VIEW', 'Producto', 'Comprobo existencias')
 def existencias_combinadas(request):
     productos = Producto.objects.all()
@@ -65,12 +104,12 @@ def existencias_combinadas(request):
     if 'producto_id' in request.GET:
         producto_id = request.GET['producto_id']
         producto_seleccionado = Producto.objects.get(id=producto_id)
-        
+
         # Existencias en BODEGAS
         existencias_bodegas = ExistenciasBodegas.objects.filter(
             producto=producto_seleccionado
         ).select_related('bodega')
-        
+
         total_bodegas = existencias_bodegas.aggregate(
             total=Sum('cantidad')
         )['total'] or 0
@@ -79,7 +118,7 @@ def existencias_combinadas(request):
         existencias_tiendas = ExistenciasTienda.objects.filter(
             producto=producto_seleccionado
         ).select_related('tienda')
-        
+
         total_tiendas = existencias_tiendas.aggregate(
             total=Sum('cantidad')
         )['total'] or 0
@@ -99,15 +138,8 @@ def existencias_combinadas(request):
     })
 
 
-
-from django.db import transaction
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .models import ExistenciasTienda, ExistenciasBodegas, TransferenciaHistorial, Iteracion
-from .forms import TransferenciaForm
-from django.utils import timezone
 # @login_required
-@login_required    
+@login_required
 @auditar_accion('TRANSFER', 'Producto', 'Transfirio existencias')
 def transferir_producto(request):
     if request.method == 'POST':
@@ -125,9 +157,10 @@ def transferir_producto(request):
                     producto=producto,
                     tienda=tienda
                 )
-                
+
                 if existencia_tienda.cantidad < cantidad:
-                    messages.error(request, 'Cantidad insuficiente en la tienda')
+                    messages.error(
+                        request, 'Cantidad insuficiente en la tienda')
                     return redirect('inventario:transferir_producto')
 
                 with transaction.atomic():
@@ -149,7 +182,6 @@ def transferir_producto(request):
                         numero_iteracion=numero_iteracion,
                         producto=producto,
                     )
-                    
 
                     # Registrar en el historial
                     TransferenciaHistorial.objects.create(
@@ -161,7 +193,8 @@ def transferir_producto(request):
                         tienda_destino=tienda
                     )
 
-                messages.success(request, f'Transferencia a {bodega.nombre} registrada en Iteración {numero_iteracion}')
+                messages.success(
+                    request, f'Transferencia a {bodega.nombre} registrada en Iteración {numero_iteracion}')
                 return redirect('inventario:transferir_producto')
 
             except ExistenciasTienda.DoesNotExist:
@@ -171,22 +204,23 @@ def transferir_producto(request):
     else:
         form = TransferenciaForm()
 
-    return render(request, 'transferencia.html', {'form': form,'layout_path': TemplateHelper.set_layout("layout_blank.html"),})
+    return render(request, 'transferencia.html', {'form': form, 'layout_path': TemplateHelper.set_layout("layout_blank.html"), })
 
-from django.shortcuts import render
-from .models import Producto, Iteracion
-from django.template.defaulttags import register
-# @register.filter
-@login_required    
+
+
+
+@login_required
 @auditar_accion('VIEW', 'Producto', 'Vio existencias')
 def get_item(dictionary, key):
     return dictionary.get(key, False)
-@login_required    
+
+
+@login_required
 @auditar_accion('VIEW', 'Producto', 'Vio existencias')
 def iteraciones_por_producto(request):
     producto_seleccionado = None
-    iteracion_id=0
-    iteraciones={}
+    iteracion_id = 0
+    iteraciones = {}
     iteraciones_agrupadas = {}
     bodegas = Bodega.objects.all()
     if 'producto_id' in request.GET:
@@ -200,7 +234,7 @@ def iteraciones_por_producto(request):
                 producto=producto_seleccionado,
             )
         # Agrupar por número de iteración
-        for iteracion in iteraciones:   
+        for iteracion in iteraciones:
             num_iteracion = iteracion.numero_iteracion
             if num_iteracion not in iteraciones_agrupadas:
                 iteraciones_agrupadas[num_iteracion] = []
@@ -208,29 +242,33 @@ def iteraciones_por_producto(request):
 
     productos = Producto.objects.all()
     try:
-        transferencia = TransferenciaHistorial.objects.filter(producto=producto_seleccionado,iteracion=iteraciones[0].id).order_by('fecha_transferencia')
+        transferencia = TransferenciaHistorial.objects.filter(
+            producto=producto_seleccionado, iteracion=iteraciones[0].id).order_by('fecha_transferencia')
     except:
-        transferencia=TransferenciaHistorial.objects.filter(producto=producto_seleccionado,iteracion=iteracion_id).order_by('fecha_transferencia')
+        transferencia = TransferenciaHistorial.objects.filter(
+            producto=producto_seleccionado, iteracion=iteracion_id).order_by('fecha_transferencia')
     iteracion_t = Iteracion.objects.all
 
     return render(request, 'iteraciones_producto.html', {
         'productos': productos,
         'producto_seleccionado': producto_seleccionado,
         'iteraciones_agrupadas': iteraciones_agrupadas,
-        'iteracion_t':iteracion_t,
-        'bodegas': bodegas, 
-        'transferencias':transferencia,
+        'iteracion_t': iteracion_t,
+        'bodegas': bodegas,
+        'transferencias': transferencia,
         'layout_path': TemplateHelper.set_layout("layout_blank.html"),
-        
+
     })
-@login_required        
+
+
+@login_required
 @auditar_accion('VIEW', 'Bodega', 'Vio bodegas')
 def detalle_bodega_iteracion(request, bodega_id):
     bodega = Bodega.objects.get(id=bodega_id)
     iteraciones = TransferenciaHistorial.objects.filter(
         bodega=bodega
     ).select_related('iteracion').order_by('-iteracion__numero_iteracion')
-    
+
     # Agrupar por iteración
     datos_agrupados = {}
     for transferencia in iteraciones:
@@ -238,54 +276,51 @@ def detalle_bodega_iteracion(request, bodega_id):
         if num_iteracion not in datos_agrupados:
             datos_agrupados[num_iteracion] = []
         datos_agrupados[num_iteracion].append(transferencia)
-    
+
     return render(request, 'detalle_bodega.html', {
         'bodega': bodega,
         'datos_agrupados': datos_agrupados,
         'layout_path': TemplateHelper.set_layout("layout_blank.html"),
 
     })
-@login_required        
+
+
+@login_required
 @auditar_accion('VIEW', 'Bodega', 'Vio mapa')
 def mapa_principal(request):
     tiendas = Tienda.objects.all()
     bodegas = Bodega.objects.all()
     productos = Producto.objects.all()
     mapa_html = generar_mapa_offline(list(tiendas) + list(bodegas))
-    return render(request, 'map.html', {'mapa': mapa_html,'tiendas': tiendas,'bodegas': bodegas,'productos':productos})
-#///////////////////Producto////////////////////////
-from django.urls import reverse_lazy
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Producto
+    return render(request, 'map.html', {'mapa': mapa_html, 'tiendas': tiendas, 'bodegas': bodegas, 'productos': productos})
+
+# ///////////////////Producto////////////////////////
+
 
 class ProductoListView(ListView):
     model = Producto
     template_name = "producto/producto_list.html"
     context_object_name = "productos"
-    
+
     def get_queryset(self):
         return (
             Producto.objects
             .annotate(
                 cantidad_tiendas=Sum('existenciastienda__cantidad'),
                 cantidad_bodegas=Sum('existenciasbodegas__cantidad'),
-                total=Sum('existenciastienda__cantidad')+Sum('existenciasbodegas__cantidad'),
+                total=Sum('existenciastienda__cantidad') +
+                Sum('existenciasbodegas__cantidad'),
             )
             .order_by('nombre')
         )
-        
+
+
 class ProductoDetailView(DetailView):
     model = Producto
     template_name = "producto/producto_detail.html"
     context_object_name = "producto"
 
-# apps/inventario/views.py
 
-from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.http import JsonResponse, Http404
-from django.template.loader import render_to_string
-from .models import Producto
 
 # ———————————————————————————————
 # 1) Listado de Productos
@@ -297,16 +332,19 @@ from .models import Producto
 # ———————————————————————————————
 class ProductoCreateView(CreateView):
     model = Producto
-    fields = ["nombre" ,"primera_necesidad" ]  # Ajusta según tus campos reales
+    fields = ["nombre", "primera_necesidad"]  # Ajusta según tus campos reales
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
+
     def form_invalid(self, form):
         # Si viene AJAX y no es válido, devolvemos solo el fragmento con errores
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             context = self.get_context_data(form=form, object=None)
-            html = render_to_string(self.template_name, context, request=self.request)
+            html = render_to_string(
+                self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
+
     @auditar_accion('CREATE', 'Producto', 'Creo producto')
     def form_valid(self, form):
         # Si viene AJAX y es válido, devolvemos { success: True }
@@ -314,6 +352,7 @@ class ProductoCreateView(CreateView):
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True})
         return response
+
     @auditar_accion('VIEW', 'Producto', 'Vio producto')
     def get(self, request, *args, **kwargs):
         # Si es AJAX, enviamos solo el fragmento de formulario (vacío)
@@ -321,7 +360,8 @@ class ProductoCreateView(CreateView):
             self.object = None
             form = self.get_form()
             context = self.get_context_data(form=form, object=None)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, comportamiento normal
         return super().get(request, *args, **kwargs)
@@ -332,28 +372,34 @@ class ProductoCreateView(CreateView):
 # ———————————————————————————————
 class ProductoUpdateView(UpdateView):
     model = Producto
-    fields = ["nombre","primera_necesidad"]  # Mismos campos que en CreateView
+    fields = ["nombre", "primera_necesidad"]  # Mismos campos que en CreateView
     template_name = "producto/producto_form.html"
     success_url = reverse_lazy("inventario:list")
+
     def form_invalid(self, form):
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            context = self.get_context_data(form=form, object=self.get_object())
-            html = render_to_string(self.template_name, context, request=self.request)
+            context = self.get_context_data(
+                form=form, object=self.get_object())
+            html = render_to_string(
+                self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
+
     @auditar_accion('UPDATE', 'Producto', 'Actualizo producto')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True})
         return response
+
     @auditar_accion('VIEW', 'Producto', 'Vio producto')
     def get(self, request, *args, **kwargs):
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             self.object = self.get_object()
             form = self.get_form()
             context = self.get_context_data(form=form, object=self.object)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({"success": True, "html": html})
         return super().get(request, *args, **kwargs)
 
@@ -365,6 +411,7 @@ class ProductoDeleteView(DeleteView):
     model = Producto
     template_name = "producto/producto_confirm_delete.html"
     success_url = reverse_lazy("inventario:producto_list")
+
     def get(self, request, *args, **kwargs):
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             try:
@@ -378,6 +425,7 @@ class ProductoDeleteView(DeleteView):
             )
             return JsonResponse({"success": True, "html": html})
         return super().get(request, *args, **kwargs)
+
     @auditar_accion('DELETE', 'Producto', 'Borro producto')
     def post(self, request, *args, **kwargs):
         # Aquí hacemos la lógica de borrado en POST y devolvemos JSON
@@ -391,40 +439,36 @@ class ProductoDeleteView(DeleteView):
         return super().post(request, *args, **kwargs)
 
 
-#///////////////////Tiendas////////////////////////
-from django.urls import reverse_lazy
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
-)
-from .models import Tienda
-from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.http import Http404, JsonResponse
-from django.template.loader import render_to_string
-from .models import Tienda
+# ///////////////////Tiendas////////////////////////
 
 
 class TiendaDetailView(DetailView):
     model = Tienda
     template_name = "tienda/tienda_detail.html"
     context_object_name = "tienda"
+
+
 class TiendaListView(ListView):
     model = Tienda
     template_name = "tienda/tienda_list.html"
     context_object_name = "tiendas"
+
 
 class TiendaCreateView(CreateView):
     model = Tienda
     fields = ["nombre", "latitud", "longitud", "tipo"]
     template_name = "tienda/tienda_form.html"
     success_url = reverse_lazy("inventario:tienda_list")
+
     def form_invalid(self, form):
         # Si es petición AJAX, devolvemos solo el HTML del formulario (con errores)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             context = self.get_context_data(form=form, object=None)
-            html = render_to_string(self.template_name, context, request=self.request)
+            html = render_to_string(
+                self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
+
     @auditar_accion('CREATE', 'Tienda', 'Creo Tienda')
     def form_valid(self, form):
         # Guardamos la nueva Tienda
@@ -433,54 +477,60 @@ class TiendaCreateView(CreateView):
             # En AJAX devolvemos solo success=True (sin recargar la página completa)
             return JsonResponse({"success": True})
         return response
+
     def get(self, request, *args, **kwargs):
         # Si la petición es AJAX, devolvemos solo el fragmento del formulario
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             self.object = None
             form = self.get_form()
             context = self.get_context_data(form=form, object=None)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, comportarse como siempre y renderizar todo el template
         return super().get(request, *args, **kwargs)
+
 
 class TiendaUpdateView(UpdateView):
     model = Tienda
     fields = ["nombre", "latitud", "longitud", "tipo"]
     template_name = "tienda/tienda_form.html"
     success_url = reverse_lazy("inventario:tienda_list")
+
     def form_invalid(self, form):
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             # Renderizamos solo el HTML del formulario con errores
-            context = self.get_context_data(form=form, object=self.get_object())
-            html = render_to_string(self.template_name, context, request=self.request)
+            context = self.get_context_data(
+                form=form, object=self.get_object())
+            html = render_to_string(
+                self.template_name, context, request=self.request)
             return JsonResponse({"success": False, "html": html})
         return super().form_invalid(form)
+
     @auditar_accion('UPDATE', 'Tienda', 'Actualizo Tienda')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": True})
         return response
+
     def get(self, request, *args, **kwargs):
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             self.object = self.get_object()
             form = self.get_form()
             context = self.get_context_data(form=form, object=self.object)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({"success": True, "html": html})
         return super().get(request, *args, **kwargs)
 
 
-from django.urls import reverse_lazy
-from django.views.generic import DeleteView
-from django.http import JsonResponse, Http404
-from django.template.loader import render_to_string
-from .models import Tienda
 class TiendaDeleteView(DeleteView):
     model = Tienda
-    template_name = "tienda/tienda_confirm_delete.html"  # Vista completa para peticiones no-AJAX
+    # Vista completa para peticiones no-AJAX
+    template_name = "tienda/tienda_confirm_delete.html"
     success_url = reverse_lazy("inventario:tienda_list")
+
     def get(self, request, *args, **kwargs):
         """
         Si es petición AJAX (por ejemplo, al hacer clic en “Eliminar” desde la lista),
@@ -500,6 +550,7 @@ class TiendaDeleteView(DeleteView):
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, se comporta como siempre:
         return super().get(request, *args, **kwargs)
+
     @auditar_accion('DELETE', 'Tienda', 'Borrar Tienda')
     def post(self, request, *args, **kwargs):
         """
@@ -518,32 +569,36 @@ class TiendaDeleteView(DeleteView):
         # Si no es AJAX, llamamos al DeleteView original (que internamente llama a delete() y redirige)
         return super().post(request, *args, **kwargs)
 
-#///////////////////Bodegas////////////////////////
-from django.urls import reverse_lazy
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
-)
-from .models import Bodega
+
+# ///////////////////Bodegas////////////////////////
+
+
 class BodegaListView(ListView):
     model = Bodega
     template_name = "bodega/bodega_list.html"
     context_object_name = "bodegas"
+
+
 class BodegaDetailView(DetailView):
     model = Bodega
     template_name = "bodega/bodega_detail.html"
     context_object_name = "bodega"
+
+
 class BodegaCreateView(CreateView):
     model = Bodega
-    fields = ["nombre", "cp", "cantidad_nucleos", "latitud", "longitud", "orden"]
+    fields = ["nombre", "cp", "cantidad_nucleos",
+              "latitud", "longitud", "orden"]
     template_name = "bodega/bodega_form.html"
     success_url = reverse_lazy("inventario:bodega_list")
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
+            html = render_to_string(self.template_name, self.get_context_data(
+                form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
-    
+
     @auditar_accion('CREATE', 'Bodega', 'Creo una  Bodega')
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -554,20 +609,27 @@ class BodegaCreateView(CreateView):
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             form = self.get_form()
-            html = render_to_string(self.template_name, {'form': form, 'object': None}, request=request)
+            html = render_to_string(self.template_name, {
+                                    'form': form, 'object': None}, request=request)
             return JsonResponse({'success': True, 'html': html})
         return super().get(request, *args, **kwargs)
+
+
 class BodegaUpdateView(UpdateView):
     model = Bodega
-    fields = ["nombre", "cp", "cantidad_nucleos", "latitud", "longitud", "orden"]
+    fields = ["nombre", "cp", "cantidad_nucleos",
+              "latitud", "longitud", "orden"]
     template_name = "bodega/bodega_form.html"
     success_url = reverse_lazy("inventario:bodega_list")
+
     def form_invalid(self, form):
         # si es AJAX, devolvemos el formulario con errores
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
+            html = render_to_string(self.template_name, self.get_context_data(
+                form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
+
     @auditar_accion('UPDATE', 'Bodega', 'Actualizo una  Bodega')
     def form_valid(self, form):
         # guardamos y devolvemos señal de éxito
@@ -575,27 +637,24 @@ class BodegaUpdateView(UpdateView):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
         return response
+
     def get(self, request, *args, **kwargs):
         # si es AJAX, devolvemos sólo el HTML del formulario
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object = self.get_object()
             form = self.get_form()
-            html = render_to_string(self.template_name, {'form': form, 'object': self.object}, request=request)
+            html = render_to_string(self.template_name, {
+                                    'form': form, 'object': self.object}, request=request)
             return JsonResponse({'success': True, 'html': html})
         return super().get(request, *args, **kwargs)
 
 
-# apps/inventario/views.py
 
-from django.urls import reverse_lazy
-from django.views.generic import DeleteView
-from django.http import JsonResponse, Http404
-from django.template.loader import render_to_string
-from .models import Bodega
 class BodegaDeleteView(DeleteView):
     model = Bodega
     template_name = "bodega/bodega_confirm_delete.html"  # Para peticiones normales
     success_url = reverse_lazy("inventario:bodega_list")
+
     def get(self, request, *args, **kwargs):
         """
         Si la petición es AJAX, devolvemos solo el fragmento de confirmación
@@ -614,6 +673,7 @@ class BodegaDeleteView(DeleteView):
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, se comporta como DeleteView normal:
         return super().get(request, *args, **kwargs)
+
     @auditar_accion('DELETE', 'Bodega', 'Borro una  Bodega')
     def post(self, request, *args, **kwargs):
         """
@@ -630,45 +690,52 @@ class BodegaDeleteView(DeleteView):
         return super().post(request, *args, **kwargs)
 
 
-#///////////////////Circunscripcion////////////////////////
-from django.urls import reverse_lazy
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
-)
-from .models import Circunscripcion
+# ///////////////////Circunscripcion////////////////////////
+
 
 class CircunscripcionDetailView(DetailView):
     model = Circunscripcion
     template_name = "circunscripcion/circunscripcion_detail.html"
     context_object_name = "circunscripcion"
+
+
 class CircunscripcionListView(ListView):
     model = Circunscripcion
     template_name = "circunscripcion/circunscripcion_list.html"
     context_object_name = "circunscripciones"
+
+
 class CircunscripcionCreateView(CreateView):
     model = Circunscripcion
     fields = ["nombre", "ancianos", "ninos", "embarazadas"]
     template_name = "circunscripcion/circunscripcion_form.html"
     success_url = reverse_lazy("inventario:circunscripcion_list")
+
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
+            html = render_to_string(self.template_name, self.get_context_data(
+                form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
+
     @auditar_accion('CREATE', 'Circunscripcion', 'Creo una Circunscripcion')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
         return response
+
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object = None
             form = self.get_form()
             context = self.get_context_data(form=form, object=self.object)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({'success': True, 'html': html})
         return super().get(request, *args, **kwargs)
+
+
 class CircunscripcionUpdateView(UpdateView):
     model = Circunscripcion
     fields = ["nombre", "ancianos", "ninos", "embarazadas"]
@@ -677,33 +744,35 @@ class CircunscripcionUpdateView(UpdateView):
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
+            html = render_to_string(self.template_name, self.get_context_data(
+                form=form), request=self.request)
             return JsonResponse({'success': False, 'html': html})
         return super().form_invalid(form)
+
     @auditar_accion('UPDATE', 'Circunscripcion', 'Actualizo una Circunscripcion')
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
         return response
+
     def get(self, request, *args, **kwargs):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             self.object = self.get_object()
             form = self.get_form()
             context = self.get_context_data(form=form, object=self.object)
-            html = render_to_string(self.template_name, context, request=request)
+            html = render_to_string(
+                self.template_name, context, request=request)
             return JsonResponse({'success': True, 'html': html})
         return super().get(request, *args, **kwargs)
 
-from django.urls import reverse_lazy
-from django.views.generic import DeleteView
-from django.http import JsonResponse, Http404
-from django.template.loader import render_to_string
-from .models import Circunscripcion
+
 class CircunscripcionDeleteView(DeleteView):
     model = Circunscripcion
-    template_name = "circunscripcion/circunscripcion_confirm_delete.html"  # Para peticiones normales
+    # Para peticiones normales
+    template_name = "circunscripcion/circunscripcion_confirm_delete.html"
     success_url = reverse_lazy("inventario:circunscripcion_list")
+
     def get(self, request, *args, **kwargs):
         """
         Si la petición es AJAX, devolvemos solo el fragmento 'circunscripcion_delete_modal.html'.
@@ -721,6 +790,7 @@ class CircunscripcionDeleteView(DeleteView):
             return JsonResponse({"success": True, "html": html})
         # Si no es AJAX, usamos el flujo normal de DeleteView (muestra pagina completa)
         return super().get(request, *args, **kwargs)
+
     @auditar_accion('DELETE', 'Circunscripcion', 'Borro una Circunscripcion')
     def post(self, request, *args, **kwargs):
         """
@@ -736,20 +806,17 @@ class CircunscripcionDeleteView(DeleteView):
         # Si no es AJAX, delegamos al DeleteView normal
         return super().post(request, *args, **kwargs)
 
-##################################Mapa##################################################
+
+################################## Mapa##################################################
 # tuapp/views.py
-import osmnx as ox
-import networkx as nx
-from shapely.geometry import Point
-from django.db.models import Sum
-@login_required    
+@login_required
 def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
     """
     Recomienda bodegas para transferencia considerando:
     - Necesidad de la bodega
     - Distancia desde tienda origen
     - Población vulnerable (si es producto de primera necesidad)
-    
+
     Args:
         tienda_origen: ID de la tienda origen
         producto: Instancia del producto
@@ -759,16 +826,17 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
     """
     # 1. Obtener ubicación de tienda
     tienda = Tienda.objects.get(id=tienda_origen)
-    
+
     lat0 = float(tienda.latitud)
     lon0 = float(tienda.longitud)
-    print(str(lat0)+"+"+ str(lon0))
-    
+    print(str(lat0)+"+" + str(lon0))
+
     # 2. Descargar grafo vial y proyectar
     G = ox.graph_from_point((lat0, lon0), dist=3000, network_type='drive')
     G_proj = ox.project_graph(G)
 
-    geom0, _ = ox.projection.project_geometry(Point(lon0, lat0), to_crs=G_proj.graph['crs'])
+    geom0, _ = ox.projection.project_geometry(
+        Point(lon0, lat0), to_crs=G_proj.graph['crs'])
     nodo_origen = ox.distance.nearest_nodes(G_proj, geom0.x, geom0.y)
 
     # 3. Calcular necesidad, distancia y vulnerables por bodega
@@ -786,10 +854,12 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
         lat_b = bodega.latitud
         lon_b = bodega.longitud
 
-        geom_b, _ = ox.projection.project_geometry(Point(lon_b, lat_b), to_crs=G_proj.graph['crs'])
+        geom_b, _ = ox.projection.project_geometry(
+            Point(lon_b, lat_b), to_crs=G_proj.graph['crs'])
         nodo_b = ox.distance.nearest_nodes(G_proj, geom_b.x, geom_b.y)
 
-        distancia = nx.shortest_path_length(G_proj, nodo_origen, nodo_b, weight='length')  # en metros
+        distancia = nx.shortest_path_length(
+            G_proj, nodo_origen, nodo_b, weight='length')  # en metros
 
         entregado = TransferenciaHistorial.objects.filter(
             producto=producto,
@@ -797,7 +867,7 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
         ).aggregate(total=Sum('cantidad'))['total'] or 0
 
         necesidad = max(bodega.cantidad_nucleos - entregado, 0)
-        
+
         # Obtener población vulnerable de la circunscripción
         vulnerables = bodega.cp.total_vulnerables if bodega.cp else 0
 
@@ -816,12 +886,13 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
     # 4. Normalizar y calcular score
     recomendaciones = []
     es_primera_necesidad = producto.primera_necesidad
-    
+
     for r in resultados:
         necesidad_n = r['necesidad'] / max_necesidad if max_necesidad else 0
         distancia_n = r['distancia'] / max_distancia if max_distancia else 0
-        vulnerables_n = r['vulnerables'] / max_vulnerables if max_vulnerables else 0
-        
+        vulnerables_n = r['vulnerables'] / \
+            max_vulnerables if max_vulnerables else 0
+
         if es_primera_necesidad:
             # Para productos de primera necesidad, ajustar pesos para priorizar vulnerables
             # Reducir alfa y beta para dar espacio a gamma
@@ -831,7 +902,7 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
         else:
             # Para productos normales, usar la fórmula original
             score = alfa * necesidad_n - beta * distancia_n
-        
+
         recomendaciones.append({
             'bodega': r['bodega'],
             'necesidad': r['necesidad'],
@@ -843,24 +914,22 @@ def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
             'longitud': r['longitud'],
         })
 
-    recomendaciones = sorted(recomendaciones, key=lambda x: x['score'], reverse=True)
-    
+    recomendaciones = sorted(
+        recomendaciones, key=lambda x: x['score'], reverse=True)
+
     # Información adicional para debug
     if es_primera_necesidad:
         print(f"Producto de PRIMERA NECESIDAD: {producto.nombre}")
         print("Priorizando bodegas con mayor población vulnerable")
     else:
         print(f"Producto regular: {producto.nombre}")
-    
+
     print(recomendaciones)
-    
+
     return recomendaciones
 
-from django.shortcuts import render, get_object_or_404
-from django.contrib import messages
-from .models import Tienda, Bodega, Producto
-from .utils.map_generator import generar_mapa_offline
-@login_required    
+
+@login_required
 def ver_tiendas(request, tienda_id=None):
     bodegas = Bodega.objects.all()
     mapa_html = None
@@ -868,11 +937,11 @@ def ver_tiendas(request, tienda_id=None):
     tiendas = Tienda.objects.all()
     productos = Producto.objects.all()
     recomendaciones = []  # Inicializar como lista vacía
-    
+
     if tienda_id:
         # si hay una tienda seleccionada, úsala como origen
         tienda_origen = get_object_or_404(Tienda, pk=tienda_id)
-        
+
         # Generar mapa con la tienda como origen
         mapa_html = generar_mapa_offline(
             ubicaciones=bodegas,
@@ -884,28 +953,33 @@ def ver_tiendas(request, tienda_id=None):
             try:
                 producto_id = request.GET['producto_id']
                 if producto_id:  # Verificar que no esté vacío
-                    producto_seleccionado = get_object_or_404(Producto, id=producto_id)
+                    producto_seleccionado = get_object_or_404(
+                        Producto, id=producto_id)
                     print(f"Producto seleccionado: {producto_seleccionado}")
-                    
+
                     # Solo llamar recomendar_bodega si hay tienda Y producto
                     try:
-                        recomendaciones = recomendar_bodega(tienda_id, producto_seleccionado)
-                        print(f"Recomendaciones generadas: {len(recomendaciones)}")
-                        
+                        recomendaciones = recomendar_bodega(
+                            tienda_id, producto_seleccionado)
+                        print(
+                            f"Recomendaciones generadas: {len(recomendaciones)}")
+
                         # Agregar información adicional para el template
                         for rec in recomendaciones:
-                            rec['distancia_km'] = round(rec['distancia_m'] / 1000, 2)
-                            
+                            rec['distancia_km'] = round(
+                                rec['distancia_m'] / 1000, 2)
+
                     except Exception as e:
-                        messages.error(request, f'Error al generar recomendaciones: {str(e)}')
+                        messages.error(
+                            request, f'Error al generar recomendaciones: {str(e)}')
                         print(f"Error en recomendar_bodega: {e}")
                         recomendaciones = []
-                        
+
             except (ValueError, Producto.DoesNotExist) as e:
                 messages.error(request, 'Producto no válido seleccionado')
                 print(f"Error con producto: {e}")
                 producto_seleccionado = None
-                
+
     else:
         # sin tienda seleccionada, mapa centrado en coordenadas por defecto
         mapa_html = generar_mapa_offline(ubicaciones=bodegas)
@@ -923,94 +997,97 @@ def ver_tiendas(request, tienda_id=None):
         'tiene_recomendaciones': len(recomendaciones) > 0,
         'es_primera_necesidad': producto_seleccionado.primera_necesidad if producto_seleccionado else False,
     }
-    
+
     return render(request, 'map.html', context)
 
-########################################Existencia en tiendas ###################################################
+
+######################################## Existencia en tiendas ###################################################
 # apps/inventario/views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from .models import Tienda, Producto, ExistenciasTienda
-from .forms import ExistenciasTiendaForm
-@login_required    
+@login_required
 @auditar_accion('CREATE', 'ExistenciasTienda', 'Actualizo ExistenciasTienda')
 def agregar_existencias_tienda(request, tienda_id=None):
     """Vista para agregar o actualizar existencias de productos en una tienda"""
     tienda = None
     if tienda_id:
         tienda = get_object_or_404(Tienda, id=tienda_id)
-    
+
     tiendas = Tienda.objects.all()
     productos = Producto.objects.all()
-    
+
     if request.method == 'POST':
         tienda_id = request.POST.get('tienda')
         producto_id = request.POST.get('producto')
         cantidad = request.POST.get('cantidad')
-        
+
         try:
             tienda_obj = get_object_or_404(Tienda, id=tienda_id)
             producto_obj = get_object_or_404(Producto, id=producto_id)
             cantidad = int(cantidad)
-            
+
             # Verificar si ya existe una existencia para este producto en esta tienda
             existencia, created = ExistenciasTienda.objects.get_or_create(
                 tienda=tienda_obj,
                 producto=producto_obj,
                 defaults={'cantidad': cantidad}
             )
-            
+
             if not created:
                 # Si ya existe, actualizar la cantidad (sumar)
                 existencia.cantidad += cantidad
                 existencia.save()
-                messages.success(request, f'Se actualizaron las existencias de {producto_obj.nombre} en {tienda_obj.nombre}. Nueva cantidad: {existencia.cantidad}')
+                messages.success(
+                    request, f'Se actualizaron las existencias de {producto_obj.nombre} en {tienda_obj.nombre}. Nueva cantidad: {existencia.cantidad}')
             else:
-                messages.success(request, f'Se agregaron {cantidad} unidades de {producto_obj.nombre} a {tienda_obj.nombre}')
-            
+                messages.success(
+                    request, f'Se agregaron {cantidad} unidades de {producto_obj.nombre} a {tienda_obj.nombre}')
+
             return redirect('inventario:agregar_existencias_tienda')
-            
+
         except ValueError:
             messages.error(request, 'La cantidad debe ser un número válido')
         except Exception as e:
             messages.error(request, f'Error al agregar existencias: {str(e)}')
-    
+
     # Obtener existencias actuales si hay una tienda seleccionada
     existencias_actuales = []
     if tienda:
-        existencias_actuales = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
-    
+        existencias_actuales = ExistenciasTienda.objects.filter(
+            tienda=tienda).select_related('producto')
+
     context = {
         'tiendas': tiendas,
         'productos': productos,
         'tienda_seleccionada': tienda,
         'existencias_actuales': existencias_actuales,
     }
-    
+
     return render(request, 'agregar_existencias_tienda.html', context)
-@login_required    
+
+
+@login_required
 @auditar_accion('VIEW', 'ExistenciasTienda', 'Ver ExistenciasTienda')
 def listar_existencias_tienda(request, tienda_id):
     """Vista para listar todas las existencias de una tienda específica"""
     tienda = get_object_or_404(Tienda, id=tienda_id)
-    existencias = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
-    
+    existencias = ExistenciasTienda.objects.filter(
+        tienda=tienda).select_related('producto')
+
     context = {
         'tienda': tienda,
         'existencias': existencias,
     }
-    
+
     return render(request, 'inventario/listar_existencias_tienda.html', context)
-@login_required    
+
+
+@login_required
 def obtener_existencias_tienda_ajax(request, tienda_id):
     """Vista AJAX para obtener existencias de una tienda"""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
             tienda = get_object_or_404(Tienda, id=tienda_id)
-            existencias = ExistenciasTienda.objects.filter(tienda=tienda).select_related('producto')
+            existencias = ExistenciasTienda.objects.filter(
+                tienda=tienda).select_related('producto')
             data = []
             for existencia in existencias:
                 data.append({
@@ -1023,7 +1100,9 @@ def obtener_existencias_tienda_ajax(request, tienda_id):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Solicitud no válida'})
-@login_required    
+
+
+@login_required
 @require_http_methods(["POST"])
 def actualizar_existencia_ajax(request):
     """Vista AJAX para actualizar existencia específica"""
@@ -1032,37 +1111,39 @@ def actualizar_existencia_ajax(request):
             tienda_id = request.POST.get('tienda_id')
             producto_id = request.POST.get('producto_id')
             nueva_cantidad = request.POST.get('cantidad')
-            
+
             tienda = get_object_or_404(Tienda, id=tienda_id)
             producto = get_object_or_404(Producto, id=producto_id)
             nueva_cantidad = int(nueva_cantidad)
-            
+
             existencia, created = ExistenciasTienda.objects.get_or_create(
                 tienda=tienda,
                 producto=producto,
                 defaults={'cantidad': nueva_cantidad}
             )
-            
+
             if not created:
                 existencia.cantidad = nueva_cantidad
                 existencia.save()
-            
+
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': f'Existencia de {producto.nombre} actualizada correctamente a {nueva_cantidad} unidades'
             })
-            
+
         except ValueError:
             return JsonResponse({'success': False, 'message': 'La cantidad debe ser un número válido'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Error al actualizar: {str(e)}'})
-    
+
     return JsonResponse({'success': False, 'message': 'Solicitud no válida'})
-@login_required    
+
+
+@login_required
 def actualizar_existencia_tienda(request, existencia_id):
     """Vista para actualizar una existencia específica"""
     existencia = get_object_or_404(ExistenciasTienda, id=existencia_id)
-    
+
     if request.method == 'POST':
         nueva_cantidad = request.POST.get('cantidad')
         try:
@@ -1073,19 +1154,10 @@ def actualizar_existencia_tienda(request, existencia_id):
             messages.error(request, 'La cantidad debe ser un número válido')
         except Exception as e:
             messages.error(request, f'Error al actualizar: {str(e)}')
-    
-    return redirect('inventario:listar_existencias_tienda', tienda_id=existencia.tienda.id)
-import datetime
-from io import BytesIO
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.template.loader import get_template
-from django.utils import timezone
-from xhtml2pdf import pisa
 
-from .models import Producto, TransferenciaHistorial
-from django.db.models import Sum
-@login_required    
+    return redirect('inventario:listar_existencias_tienda', tienda_id=existencia.tienda.id)
+
+
 def generar_pdf_desde_html(html_content):
     """
     Dado un string de HTML, lo convierte a PDF usando xhtml2pdf (pisa)
@@ -1096,7 +1168,8 @@ def generar_pdf_desde_html(html_content):
     if pdf.err:
         return None
     return result.getvalue()
-@login_required    
+
+
 def informe_ventas_pdf(request, producto_id, fecha_str=None):
     """
     Vista que genera un informe de ventas (transferencias) de un producto
@@ -1107,7 +1180,8 @@ def informe_ventas_pdf(request, producto_id, fecha_str=None):
     # 1. Definir la fecha del reporte:
     if fecha_str:
         try:
-            fecha_reporte = datetime.datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            fecha_reporte = datetime.datetime.strptime(
+                fecha_str, "%Y-%m-%d").date()
         except ValueError:
             return HttpResponse("Formato de fecha inválido. Usa YYYY-MM-DD.", status=400)
     else:
@@ -1139,12 +1213,9 @@ def informe_ventas_pdf(request, producto_id, fecha_str=None):
             'cadena': transferencia.tienda_destino.tipo if transferencia.tienda_destino else ""
         })
 
-    # Agregar 12 filas vacías como en tu ejemplo
-    filas_vacias = [{} for _ in range(12)]
-    datos_informe.extend(filas_vacias)
-
     # 5. Calcular total de cantidades
-    total_cantidad = transferencias.aggregate(total=Sum('cantidad'))['total'] or 0
+    total_cantidad = transferencias.aggregate(
+        total=Sum('cantidad'))['total'] or 0
 
     # 6. Preparar el contexto para la plantilla
     contexto = {
@@ -1155,7 +1226,6 @@ def informe_ventas_pdf(request, producto_id, fecha_str=None):
         'total_cantidad': total_cantidad,
         'fecha_generacion': timezone.now().strftime('%d/%m/%Y %H:%M'),
     }
-
     # 7. Renderizar la plantilla a HTML
     template = get_template('informe_ventas.html')
     html_content = template.render(contexto)
@@ -1170,7 +1240,8 @@ def informe_ventas_pdf(request, producto_id, fecha_str=None):
     filename = f"informe_ventas_{producto.nombre}_{fecha_reporte}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
-@login_required    
+
+
 def formulario_informe_ventas(request):
     """
     Muestra el formulario para seleccionar producto y fecha
@@ -1178,7 +1249,8 @@ def formulario_informe_ventas(request):
     """
     productos = Producto.objects.all()
     return render(request, 'informe_formulario.html', {'productos': productos})
-@login_required    
+
+
 def informe_ventas_pdf_form(request):
     """
     Recibe parámetros GET (?producto=ID&fecha=YYYY-MM-DD) y llama
