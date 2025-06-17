@@ -112,9 +112,9 @@ class TransferenciaHistorial(models.Model):
     cantidad = models.IntegerField()
     fecha_transferencia = models.DateTimeField()
     iteracion = models.ForeignKey(Iteracion, on_delete=models.CASCADE)
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     tienda_destino = models.ForeignKey(
     Tienda, on_delete=models.CASCADE)
+    stock_previo = models.IntegerField(null=True, blank=True, help_text="Stock en la tienda antes de esta transferencia")
 
     class Meta:
         ordering = ['-fecha_transferencia']

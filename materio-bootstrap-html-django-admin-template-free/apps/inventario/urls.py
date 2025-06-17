@@ -48,4 +48,11 @@ urlpatterns = [
     path('informe-formulario/', formulario_informe_ventas, name='formulario_informe'),
     path('informe-generar/', informe_ventas_pdf_form, name='informe_ventas_pdf_form'),
     path('informe-ventas/<int:producto_id>/<str:fecha_str>/', informe_ventas_pdf, name='informe_ventas_pdf'),
+    path('historial-transferencias/', views.transferencias_por_producto, name='transferencias_por_producto'),
+    
+    path('usuarios/', views.user_list, name='user_list'),
+    path('usuarios/crear/', views.user_create, name='user_create'),
+    path('usuarios/<int:pk>/editar/', views.user_edit, name='user_edit'),
+    path('usuarios/<int:pk>/cambiar_password/', views.user_change_password, name='user_change_password'),
+    path('usuarios/<int:pk>/eliminar/', views.user_delete, name='user_delete'),
 ]

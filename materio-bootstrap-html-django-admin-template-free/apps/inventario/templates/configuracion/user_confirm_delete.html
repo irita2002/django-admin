@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Confirmar eliminación" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+    <div class="card-header bg-danger text-white">
+      <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>{% trans "Confirmar eliminación" %}</h5>
+    </div>
+    <div class="card-body">
+      <p>
+        {% blocktrans with username=user_obj.username %}
+          ¿Estás seguro de que deseas eliminar al usuario "{{ username }}"? Esta acción no se puede deshacer.
+        {% endblocktrans %}
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-trash me-1"></i>{% trans "Eliminar Usuario" %}
+        </button>
+        <a href="{% url 'inventario:user_list' %}" class="btn btn-secondary ms-2">
+          <i class="bi bi-arrow-left me-1"></i>{% trans "Cancelar" %}
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

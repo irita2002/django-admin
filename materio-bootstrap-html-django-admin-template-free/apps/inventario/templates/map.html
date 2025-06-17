@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static i18n %}
-
+{% load permissions %}
 {% block content %}
 <style>
   /* Aplicar degradado de #B0E0E6 hacia blanco */
@@ -9,8 +9,6 @@
     background-attachment: fixed !important;
     min-height: 100vh !important;
   }
-  
-  /* Asegurar que el main container también tenga el degradado */
   main.container {
     background: linear-gradient(135deg, #B0E0E6 0%, #ffffff 100%) !important;
     background-attachment: fixed !important;
@@ -19,65 +17,38 @@
     padding-right: 0 !important;
     min-height: 100vh !important;
   }
+  #map-container {
+    width: 100%;
+    height: 400px;
+  }
 </style>
+
 <div class="container-fluid py-4">
+  <!-- Primera fila: Tiendas a la izquierda, Mapa a la derecha -->
   <div class="row mb-4">
-    <!-- Tiendas -->
-    <div class="col-md-6">
+    <!-- Columna Tiendas -->
+    <div class="col-md-6 mb-3">
       <div class="card h-100 shadow-sm">
         <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Tiendas</h5>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Nombre</th>
-                <th>Tipo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for t in tiendas %}
-              <tr class="{% if tienda_seleccionada == t.id %}table-primary{% endif %} tienda-row" 
-                  data-url="{% url 'inventario:ver_tiendas' t.id %}" 
-                  style="cursor: pointer;"
-                  onclick="window.location.href='{% url 'inventario:ver_tiendas' t.id %}'">
-                <td>{{ t.nombre }}</td>
-                <td>{{ t.id }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Resto del contenido igual... -->
-    <div class="col-md-6">
-      <div class="card h-100 shadow-sm">
-        <div class="card-header bg-success text-white">
-          <h5 class="mb-0">Mapa de Ubicaciones</h5>
-        </div>
-        <div class="card-body p-0" style="height: 100%;">
-          <div id="map-container" style="width: 100%; height: 100%;">
-            {{ mapa|safe }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Resto del template igual... -->
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-info text-white">
-          <h6 class="mb-0">Seleccione Producto</h6>
-        </div>
-        <div class="card-body">
-          <form method="get" action="">
-            <div class="mb-3">
-              <select name="producto_id" class="form-select">
+          <div class="d-flex justify-content-between align-items-center">
+            <!-- Grupo: título + botón "Nueva Tienda" -->
+            <div class="d-flex align-items-center">
+              <h5 class="mb-0">{% trans "Tiendas" %}</h5>
+              {% if user|has_group:"Coordinador" %}
+                <button
+                  type="button"
+                  class="btn btn-light btn-sm ms-2 new-tienda-btn"
+                  data-url="{% url 'inventario:tienda_create' %}"
+                  data-title="{% trans 'Nueva Tienda' %}"
+                  onclick="event.stopPropagation();">
+                  <span class="d-none d-sm-inline">{% trans "Nueva Tienda" %}</span>
+                </button>
+              {% endif %}
+            </div>
+            <!-- Formulario de filtro a la derecha -->
+            <form method="get" action="" class="d-flex align-items-center mb-0">
+              {# Incluye aquí hidden inputs adicionales si quieres preservar otros GET #}
+              <select name="producto_id" id="producto_select" class="form-select form-select-sm w-auto me-2">
                 <option value="">{% trans "Seleccione un producto" %}</option>
                 {% for producto in productos %}
                   <option value="{{ producto.id }}"
@@ -86,102 +57,148 @@
                   </option>
                 {% endfor %}
               </select>
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm">{% trans "Filtrar" %}</button>
-          </form>
+              <button type="submit" class="btn btn-light btn-sm" onclick="event.stopPropagation();">
+                <i class="bi bi-funnel-fill me-1"></i>{% trans "Filtrar" %}
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
-
-      <div class="card shadow-sm">
-        <div class="card-header bg-warning text-white">
-          <h6 class="mb-0">Recomendaciones</h6>
-        </div>
+        
         <div class="card-body p-0">
-          <table class="table table-striped mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>{% trans "Bodega" %}</th>
-                <th>{% trans "Necesidad" %}</th>
-                <th>{% trans "Distancia (m)" %}</th>
-                <th>{% trans "Vulnerables" %}</th>
-
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in recomendaciones %}
-              <tr class="recomendacion" data-lat="{{ r.latitud }}" data-lng="{{ r.longitud }}">
-                <td>{{ r.bodega.nombre }}</td>
-                <td>{{ r.necesidad }}</td>
-                <td>{{ r.distancia_m }}</td>
-                <td>{{ r.vulnerables }}</td>
-
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="3" class="text-center text-muted">
-                  {% trans "No hay recomendaciones para mostrar." %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>{% trans "Nombre" %}</th>
+                  <th>{% trans "Tipo" %}</th>
+                  <th class="text-center">{% trans "Acciones" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in tiendas %}
+                  <tr class="tienda-row {% if tienda_seleccionada == t.id %}table-primary{% endif %}"
+                      style="cursor: pointer;"
+                      onclick="window.location.href='{% url 'inventario:ver_tiendas' t.id %}'">
+                    <td>{{ t.nombre }}</td>
+                    <td>{{ t.tipo }}</td>
+                    <td class="text-center">
+                      {% if user|has_group:"Coordinador" %}
+                        <!-- Botón Editar: detener propagación para que no dispare onclick del tr -->
+                        <button
+                          class="btn btn-sm btn-outline-primary me-1 edit-btn"
+                          data-url="{% url 'inventario:tienda_update' t.pk %}"
+                          data-title="{% trans 'Editar' %} {{ t.nombre }}"
+                          title="{% trans 'Editar' %}"
+                          onclick="event.stopPropagation();">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <!-- Botón Eliminar: detener propagación también -->
+                        <button
+                          class="btn btn-sm btn-outline-danger delete-btn"
+                          data-url="{% url 'inventario:tienda_delete' t.pk %}"
+                          data-title="{% trans 'Eliminar' %} {{ t.nombre }}"
+                          title="{% trans 'Eliminar' %}"
+                          onclick="event.stopPropagation();">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-center text-muted py-4">
+                      <i class="bi bi-exclamation-circle me-1"></i>
+                      {% trans "No hay tiendas para mostrar." %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-6">
-      <!-- Espacio libre -->
+    <!-- Columna Mapa de Ubicaciones -->
+    <div class="col-md-6 mb-3">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">{% trans "Mapa de Ubicaciones" %}</h5>
+        </div>
+        <div class="card-body p-0">
+          <div id="map-container">
+            {{ mapa|safe }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segunda fila: Recomendaciones -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0">{% trans "Recomendaciones" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>{% trans "Bodega" %}</th>
+                  <th class="text-end">{% trans "Necesidad" %}</th>
+                  <th class="text-end">{% trans "Distancia (m)" %}</th>
+                  <th class="text-end">{% trans "Vulnerables" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in recomendaciones %}
+                  <tr class="recomendacion"
+                      data-lat="{{ r.latitud }}"
+                      data-lng="{{ r.longitud }}"
+                      style="cursor: pointer;">
+                    <td>{{ r.bodega.nombre }}</td>
+                    <td class="text-end">{{ r.necesidad }}</td>
+                    <td class="text-end">{{ r.distancia_m }}</td>
+                    <td class="text-end">{{ r.vulnerables }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                      <i class="bi bi-exclamation-circle me-1"></i>
+                      {% trans "No hay recomendaciones para mostrar." %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
   {{ block.super }}
   <script>
-    // Función mejorada para manejar clicks en tiendas
+    // Manejar clicks en filas de tienda (hover visual)
     function initializeTiendaClicks() {
       console.log('Inicializando clicks de tiendas...');
-      
-      const tiendaRows = document.querySelectorAll('.tienda-row');
-      console.log('Filas encontradas:', tiendaRows.length);
-      
-      tiendaRows.forEach((row, index) => {
-        const url = row.dataset.url;
-        console.log(`Fila ${index}: URL = ${url}`);
-        
-        // Remover eventos anteriores para evitar duplicados
-        row.replaceWith(row.cloneNode(true));
-        
-        // Obtener la nueva referencia después del clonado
-        const newRow = document.querySelectorAll('.tienda-row')[index];
-        
-        newRow.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          console.log('Click en tienda, navegando a:', url);
-          
-          if (url) {
-            window.location.href = url;
-          } else {
-            console.error('URL no encontrada para esta tienda');
-          }
-        });
-        
-        // Añadir efecto visual al hover
-        newRow.addEventListener('mouseenter', function() {
+      document.querySelectorAll('.tienda-row').forEach(row => {
+        // Ya existe onclick inline para navegación; aquí sólo hover:
+        row.addEventListener('mouseenter', function() {
           this.style.backgroundColor = '#e3f2fd';
         });
-        
-        newRow.addEventListener('mouseleave', function() {
+        row.addEventListener('mouseleave', function() {
           this.style.backgroundColor = '';
         });
       });
     }
 
-    // Función para manejar el mapa
+    // Manejar interacción con el mapa y recomendaciones
     function initializeMapInteraction() {
       const iframe = document.querySelector('#map-container iframe, .folium-map iframe');
       if (iframe) {
@@ -190,9 +207,7 @@
           const mapVar = Object.keys(win).find(k => k.startsWith('map_'));
           if (mapVar) {
             const foliumMap = win[mapVar];
-            
             document.querySelectorAll('.recomendacion').forEach(fila => {
-              fila.style.cursor = 'pointer';
               fila.addEventListener('click', () => {
                 const lat = parseFloat(fila.dataset.lat);
                 const lng = parseFloat(fila.dataset.lng);
@@ -200,29 +215,26 @@
                   foliumMap.setView([lat, lng], 17);
                 }
               });
+              fila.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = '#fff3cd';
+              });
+              fila.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+              });
             });
           }
         });
       }
     }
 
-    // Esperar a que el DOM esté completamente cargado
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM completamente cargado');
         initializeTiendaClicks();
         initializeMapInteraction();
       });
     } else {
-      // DOM ya está cargado
-      console.log('DOM ya estaba cargado');
       initializeTiendaClicks();
       initializeMapInteraction();
     }
-
-    // Fallback: también ejecutar después de un pequeño delay
-    setTimeout(function() {
-      initializeTiendaClicks();
-    }, 500);
   </script>
 {% endblock %}

@@ -182,7 +182,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Template Settings
 # ------------------------------------------------------------------------------
-
+USE_I18N = True
+USE_L10N = True
 THEME_LAYOUT_DIR = THEME_LAYOUT_DIR
 THEME_VARIABLES = THEME_VARIABLES
 LOGIN_URL = '/auth/login'

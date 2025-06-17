@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Gestión de Usuarios" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>{% trans "Usuarios" %}</h3>
+    <a href="{% url 'inventario:user_create' %}" class="btn btn-success">
+      <i class="bi bi-plus-lg me-1"></i>{% trans "Nuevo Usuario" %}
+    </a>
+  </div>
+
+  <!-- Búsqueda rápida -->
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="{% trans 'Buscar usuario...' %}">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-sm btn-primary">
+        <i class="bi bi-search me-1"></i>{% trans "Buscar" %}
+      </button>
+    </div>
+  </form>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "Nombre de Usuario" %}</th>
+              <th>{% trans "Nombre" %}</th>
+              <th>{% trans "Email" %}</th>
+              <th>{% trans "Activo" %}</th>
+              <th>{% trans "Roles" %}</th>
+              <th class="text-end">{% trans "Acciones" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in page_obj %}
+              <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.get_full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  {% if user.is_active %}
+                    <span class="badge bg-success">{% trans "Sí" %}</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{% trans "No" %}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% for grp in user.groups.all %}
+                    <span class="badge bg-info text-dark">{{ grp.name }}</span>
+                  {% empty %}
+                    <span class="text-muted">{% trans "Sin rol" %}</span>
+                  {% endfor %}
+                </td>
+                <td class="text-end">
+                  <a href="{% url 'inventario:user_edit' user.pk %}" class="btn btn-sm btn-outline-primary me-1" title="{% trans 'Editar' %}">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{% url 'inventario:user_change_password' user.pk %}" class="btn btn-sm btn-outline-warning me-1" title="{% trans 'Cambiar contraseña' %}">
+                    <i class="bi bi-key"></i>
+                  </a>
+                  {% if request.user.pk != user.pk %}
+                    <a href="{% url 'inventario:user_delete' user.pk %}" class="btn btn-sm btn-outline-danger" title="{% trans 'Eliminar' %}">
+                      <i class="bi bi-trash"></i>
+                    </a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                  <i class="bi bi-exclamation-circle me-1"></i>
+                  {% trans "No se encontraron usuarios." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <!-- Paginación -->
+      <nav aria-label="Paginación">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
+              <li class="page-item"><a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}" aria-label="Siguiente">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}

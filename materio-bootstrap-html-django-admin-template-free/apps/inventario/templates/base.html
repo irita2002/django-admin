@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load permissions %}
+{% load static i18n %}
 
 <html lang="es">
 <head>
@@ -53,10 +54,22 @@
       {% endif %}
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:iteraciones_producto' %}">Iteraciones por Producto</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:list' %}">Productos</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'inventario:tienda_list' %}">Tiendas</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:bodega_list' %}">Bodegas</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:circunscripcion_list' %}">Circunscripciones</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'inventario:formulario_informe' %}">Informe</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'inventario:transferencias_por_producto' %}">Historial</a></li>
+          {% if user.is_staff %}
+          {% if not user|has_group:"Revisor" %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'inventario:user_list' %}" title="{% trans 'Administrar' %}">
+                <i class="bi bi-gear-fill"></i>
+                <!-- Si quieres texto al lado del icono en pantallas más grandes, puedes añadir: -->
+              </a>
+            </li>
+          {% endif %}
+        {% endif %}
+        
+
 
           <li class="nav-item">
             <form method="post" action="{% url 'logout' %}">

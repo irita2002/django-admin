@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Crear Usuario" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>{% trans "Crear Usuario" %}</h5>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+          {{ form.username.label_tag }}
+          {{ form.username }}
+          {{ form.username.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.password1.label_tag }}
+          {{ form.password1 }}
+          {{ form.password1.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.password2.label_tag }}
+          {{ form.password2 }}
+          {{ form.password2.errors }}
+        </div>
+        <button type="submit" class="btn btn-success w-100">
+          <i class="bi bi-check-lg me-1"></i>{% trans "Crear" %}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
