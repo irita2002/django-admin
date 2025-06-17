@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transferenciahistorial',
             name='tienda_destino',
-            field=models.ForeignKey(default=False, on_delete=django.db.models.deletion.CASCADE, to='inventario.tienda'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='inventario.tienda'),
         ),
     ]

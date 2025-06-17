@@ -32,7 +32,7 @@ def sign_in(request):
                 return redirect('/')
         
         # form is not valid or user is not authenticated
-        messages.error(request,f'Contaseña o usuario incorrecto')
+        messages.error(request,'Contaseña o usuario incorrecto')
         return render(request,'auth_login_basic.html',{'form': form,'layout_path': TemplateHelper.set_layout("layout_blank.html"),})
 
 def sign_out(request):

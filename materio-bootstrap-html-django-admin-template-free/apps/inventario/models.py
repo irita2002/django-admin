@@ -114,7 +114,7 @@ class TransferenciaHistorial(models.Model):
     iteracion = models.ForeignKey(Iteracion, on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     tienda_destino = models.ForeignKey(
-        Tienda, on_delete=models.CASCADE, default=False)
+    Tienda, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ['-fecha_transferencia']

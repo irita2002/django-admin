@@ -285,7 +285,6 @@ def detalle_bodega_iteracion(request, bodega_id):
     })
 
 
-@login_required
 @auditar_accion('VIEW', 'Bodega', 'Vio mapa')
 def mapa_principal(request):
     tiendas = Tienda.objects.all()
@@ -809,7 +808,6 @@ class CircunscripcionDeleteView(DeleteView):
 
 ################################## Mapa##################################################
 # tuapp/views.py
-@login_required
 def recomendar_bodega(tienda_origen, producto, alfa=0.7, beta=0.3, gamma=0.5):
     """
     Recomienda bodegas para transferencia considerando:
